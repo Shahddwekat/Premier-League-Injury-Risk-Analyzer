@@ -11,18 +11,18 @@ const TEAMS = [
 const TeamSearch = ({ onTeamSelect, loading }) => {
   const [selectedTeam, setSelectedTeam] = useState("");
 
-  const handleChange = (e) => {
-    setSelectedTeam(e.target.value);
-  };
-
   const handleAnalyze = () => {
     if (!selectedTeam) return;
     onTeamSelect(Number(selectedTeam));
   };
 
   return (
-    <div>
-      <select value={selectedTeam} onChange={handleChange}>
+    <div className="flex gap-3 justify-center">
+      <select
+        value={selectedTeam}
+        onChange={(e) => setSelectedTeam(e.target.value)}
+        className="bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500"
+      >
         <option value="">Select a team</option>
         {TEAMS.map((team) => (
           <option key={team.id} value={team.id}>
@@ -30,8 +30,11 @@ const TeamSearch = ({ onTeamSelect, loading }) => {
           </option>
         ))}
       </select>
-
-      <button onClick={handleAnalyze} disabled={loading || !selectedTeam}>
+      <button
+        onClick={handleAnalyze}
+        disabled={loading || !selectedTeam}
+        className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+      >
         {loading ? "Analyzing..." : "Analyze Squad"}
       </button>
     </div>
