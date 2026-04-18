@@ -3,7 +3,7 @@ import TeamSearch from "./components/TeamSearch";
 import PlayerCard from "./components/PlayerCard";
 import SkeletonCard from "./components/SkeletonCard";
 import { analyzeWorkload } from "./services/claudeApi";
-import { getSquad, getTeamFixtures } from "./services/footballApi";
+import { getSquad, getTeamFixtures, getPlayerStats } from "./services/footballApi";
 
 function App() {
   const [players, setPlayers] = useState([]);
@@ -17,9 +17,10 @@ function App() {
       setError(null);
       setPlayers([]);
 
-      const [squadData, fixtureData] = await Promise.all([
+      const [squadData, fixtureData, statsData] = await Promise.all([
         getSquad(teamId),
         getTeamFixtures(teamId),
+        getPlayerStats(teamId),
       ]);
 
       const logo = squadData?.response?.[0]?.team?.logo || null;
@@ -28,11 +29,13 @@ function App() {
       const analysisData = await analyzeWorkload({
         squad: squadData,
         fixtures: fixtureData,
+        stats: statsData,
       });
 
       const content = analysisData.content?.[0]?.text || "[]";
       const clean = content.replace(/```json|```/g, "").trim();
       const parsedPlayers = JSON.parse(clean);
+      console.log("Parsed players:", parsedPlayers);
 
       setPlayers(parsedPlayers);
     } catch (err) {

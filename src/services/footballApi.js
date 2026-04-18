@@ -23,3 +23,10 @@ export const getTeamFixtures = async (teamId) => {
   });
   return response.data;
 };
+
+export const getPlayerStats = async (teamId) => {
+  const response = await footballApi.get("/players", {
+    params: { team: teamId, season: 2024 },
+  });
+  return response.data;
+};
