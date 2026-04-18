@@ -19,7 +19,7 @@ export const getSquad = async (teamId) => {
 
 export const getTeamFixtures = async (teamId) => {
   const response = await footballApi.get("/fixtures", {
-    params: { team: teamId, last: 10 },
+    params: { team: teamId, last: 10, season: 2024 },
   });
   return response.data;
 };

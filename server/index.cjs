@@ -11,6 +11,32 @@ app.post("/api/analyze", async (req, res) => {
   try {
     const playersData = req.body.playersData;
 
+    const { squad, fixtures } = playersData;
+    console.log("squad keys:", Object.keys(squad || {}));
+
+    // ✅ Extract clean data
+    const players = squad?.response?.[0]?.players || [];
+    const recentFixtures = fixtures?.response || [];
+
+    console.log("Players:", JSON.stringify(players, null, 2));
+    console.log("Fixtures:", JSON.stringify(recentFixtures, null, 2));
+
+    const prompt = `You are a sports science analyst. Given the following Premier League squad data and recent fixture history, identify the top 3 players at highest injury risk.
+
+Consider: player age, position, minutes played, and fixture congestion (how many games in the last 30 days).
+
+Squad data: ${JSON.stringify(players)}
+
+Recent fixtures: ${JSON.stringify(recentFixtures)}
+
+For each player give:
+- name
+- risk (High/Medium/Low)
+- explanation (2 sentences mentioning specific data points)
+
+Respond in JSON format only. No markdown, no backticks. Raw JSON array:
+[{"name": "Player Name", "risk": "High", "explanation": "..."}]`;
+
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -18,12 +44,7 @@ app.post("/api/analyze", async (req, res) => {
         messages: [
           {
             role: "user",
-            content: `You are a sports science analyst. Given the following squad data, identify the top 3 players at highest injury risk based on age, position, and minutes played. For each player give a risk level (High/Medium/Low) and a 2 sentence explanation.
-
-Data: ${JSON.stringify(playersData)}
-
-Respond in JSON format only. No markdown, no backticks, just raw JSON array like this:
-[{"name": "Player Name", "risk": "High", "explanation": "explanation here"}]`,
+            content: prompt,
           },
         ],
       },
@@ -36,6 +57,7 @@ Respond in JSON format only. No markdown, no backticks, just raw JSON array like
     );
 
     const text = response.data.choices[0].message.content;
+
     res.json({ content: [{ text }] });
   } catch (error) {
     console.error("Groq API error:", error.response?.data || error.message);

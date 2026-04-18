@@ -1,24 +1,38 @@
 import { useState } from "react";
 import TeamSearch from "./components/TeamSearch";
 import PlayerCard from "./components/PlayerCard";
-import { getSquad } from "./services/footballApi";
 import { analyzeWorkload } from "./services/claudeApi";
+import { getSquad, getTeamFixtures } from "./services/footballApi";
 
 function App() {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [teamLogo, setTeamLogo] = useState(null);
 
   const handleTeamSelect = async (teamId) => {
     try {
       setLoading(true);
       setError(null);
       setPlayers([]);
-      const squadData = await getSquad(teamId);
-      const analysisData = await analyzeWorkload(squadData);
+
+      const [squadData, fixtureData] = await Promise.all([
+        getSquad(teamId),
+        getTeamFixtures(teamId),
+      ]);
+
+      const logo = squadData?.response?.[0]?.team?.logo || null;
+      setTeamLogo(logo);
+
+      const analysisData = await analyzeWorkload({
+        squad: squadData,
+        fixtures: fixtureData,
+      });
+
       const content = analysisData.content?.[0]?.text || "[]";
       const clean = content.replace(/```json|```/g, "").trim();
       const parsedPlayers = JSON.parse(clean);
+
       setPlayers(parsedPlayers);
     } catch (err) {
       console.error(err);
@@ -52,6 +66,10 @@ function App() {
           <div className="mt-10 text-center text-gray-400 animate-pulse">
             Analyzing squad data...
           </div>
+        )}
+
+        {teamLogo && (
+          <img src={teamLogo} alt="Team logo" className="w-16 h-16 mx-auto mt-8" />
         )}
 
         {players.length > 0 && (
