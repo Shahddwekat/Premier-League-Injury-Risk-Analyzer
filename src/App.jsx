@@ -3,7 +3,7 @@ import TeamSearch from "./components/TeamSearch";
 import PlayerCard from "./components/PlayerCard";
 import SkeletonCard from "./components/SkeletonCard";
 import { analyzeWorkload } from "./services/claudeApi";
-import { getSquad, getTeamFixtures, getPlayerStats } from "./services/footballApi";
+import { getSquad, getTeamFixtures, getPlayerStats, getInjuries } from "./services/footballApi";
 
 function App() {
   const [players, setPlayers] = useState([]);
@@ -17,10 +17,11 @@ function App() {
       setError(null);
       setPlayers([]);
 
-      const [squadData, fixtureData, statsData] = await Promise.all([
+      const [squadData, fixtureData, statsData, injuryData] = await Promise.all([
         getSquad(teamId),
         getTeamFixtures(teamId),
         getPlayerStats(teamId),
+        getInjuries(teamId),
       ]);
 
       const logo = squadData?.response?.[0]?.team?.logo || null;
@@ -30,6 +31,7 @@ function App() {
         squad: squadData,
         fixtures: fixtureData,
         stats: statsData,
+        injuries: injuryData,
       });
 
       const content = analysisData.content?.[0]?.text || "[]";

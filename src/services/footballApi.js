@@ -30,3 +30,9 @@ export const getPlayerStats = async (teamId) => {
   });
   return response.data;
 };
+export const getInjuries = async (teamId) => {
+  const response = await footballApi.get("/injuries", {
+    params: { team: teamId, season: 2024 },
+  });
+  return response.data;
+};

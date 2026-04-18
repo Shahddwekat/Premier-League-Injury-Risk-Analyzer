@@ -5,13 +5,12 @@ const axios = require("axios");
 
 const app = express();
 app.use(cors());
-app.use(express.json());
-
+app.use(express.json({ limit: "10mb" }));
 app.post("/api/analyze", async (req, res) => {
   try {
     const playersData = req.body.playersData;
 
-    const { squad, fixtures, stats } = playersData;
+    const { squad, fixtures, stats, injuries: injuryData } = playersData;
 
     const recentFixtures = fixtures?.response || [];
     const playerStats = stats?.response?.map(p => ({
@@ -23,6 +22,12 @@ app.post("/api/analyze", async (req, res) => {
       position: p.statistics[0]?.games?.position || "Unknown",
     })) || [];
 
+    const injuries = injuryData?.response?.map(i => ({
+      player: i.player.name,
+      type: i.player.type,
+      reason: i.player.reason,
+    })) || [];
+
     console.log("Player stats:", JSON.stringify(playerStats, null, 2));
 
     const prompt = `You are a sports science analyst. Given the following Premier League squad data and recent fixture history, identify the top 3 players at highest injury risk.
@@ -31,9 +36,13 @@ Consider: player age, position, minutes played, and fixture congestion (how many
 
 Only consider players with more than 0 appearances. Focus on players with the highest minutes played as they are most at risk from workload.
 
+If a player is currently injured, mark them High Risk regardless of minutes played.
+
 Squad with season stats: ${JSON.stringify(playerStats)}
 
 Recent fixtures: ${JSON.stringify(recentFixtures)}
+
+Current injuries: ${JSON.stringify(injuries)}
 
 For each player give:
 - name
