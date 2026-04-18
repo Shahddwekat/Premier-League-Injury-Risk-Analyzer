@@ -1,6 +1,7 @@
 import { useState } from "react";
 import TeamSearch from "./components/TeamSearch";
 import PlayerCard from "./components/PlayerCard";
+import SkeletonCard from "./components/SkeletonCard";
 import { analyzeWorkload } from "./services/claudeApi";
 import { getSquad, getTeamFixtures } from "./services/footballApi";
 
@@ -62,14 +63,16 @@ function App() {
           </div>
         )}
 
-        {loading && (
-          <div className="mt-10 text-center text-gray-400 animate-pulse">
-            Analyzing squad data...
-          </div>
-        )}
-
         {teamLogo && (
           <img src={teamLogo} alt="Team logo" className="w-16 h-16 mx-auto mt-8" />
+        )}
+
+        {loading && (
+          <div className="mt-8 grid gap-4">
+            {[1, 2, 3].map((i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
         )}
 
         {players.length > 0 && (
