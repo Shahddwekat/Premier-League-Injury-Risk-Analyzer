@@ -11,40 +11,26 @@ function App() {
   const [players, setPlayers] = useState([]);
   const [teamInjuries, setTeamInjuries] = useState([]);
   const [teamName, setTeamName] = useState("");
+  const [gameweekAdvice, setGameweekAdvice] = useState("");
+  const [squadFitnessScore, setSquadFitnessScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [teamLogo, setTeamLogo] = useState(null);
 
   const navigate = useNavigate();
 
-  const calculateFitnessScore = (players) => {
-    if (!players || players.length === 0) return 0;
-
-    const riskToFitness = {
-      High: 33,
-      Medium: 66,
-      Low: 100,
-    };
-
-    const totalScore = players.reduce((sum, player) => {
-      return sum + (riskToFitness[player.risk] ?? 100);
-    }, 0);
-
-    return Math.round(totalScore / players.length);
-  };
-
-  const fitnessScore = calculateFitnessScore(players);
-
   const handleTeamSelect = async (teamId) => {
     try {
       setLoading(true);
       setError(null);
 
-      // ✅ Reset all state cleanly
+      // Reset state
       setPlayers([]);
       setTeamInjuries([]);
       setTeamLogo(null);
       setTeamName("");
+      setGameweekAdvice("");
+      setSquadFitnessScore(0);
 
       const [squadData, fixtureData, statsData, injuryData] = await Promise.all([
         getSquad(teamId),
@@ -73,6 +59,9 @@ function App() {
 
       setTeamInjuries(analysisData.injuries || []);
       setPlayers(parsedPlayers);
+      setGameweekAdvice(analysisData.gameweekAdvice || "");
+      setSquadFitnessScore(analysisData.squadFitnessScore || 0);
+
     } catch (err) {
       console.error(err);
       setError("Failed to analyze squad. Please try again.");
@@ -114,6 +103,7 @@ function App() {
                 />
               )}
 
+              {/* ✅ Updated fitness bar */}
               {players.length > 0 && (
                 <div className="mt-6 bg-gray-900 border border-gray-700 rounded-xl p-5">
                   <div className="flex justify-between items-center mb-2">
@@ -121,21 +111,32 @@ function App() {
                       Squad Fitness
                     </span>
                     <span className="text-white font-bold text-lg">
-                      {fitnessScore}%
+                      {squadFitnessScore}%
                     </span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-3">
                     <div
                       className={`h-3 rounded-full transition-all ${
-                        fitnessScore >= 75
+                        squadFitnessScore >= 75
                           ? "bg-green-500"
-                          : fitnessScore >= 50
+                          : squadFitnessScore >= 50
                           ? "bg-yellow-500"
                           : "bg-red-500"
                       }`}
-                      style={{ width: `${fitnessScore}%` }}
+                      style={{ width: `${squadFitnessScore}%` }}
                     />
                   </div>
+                </div>
+              )}
+
+              {gameweekAdvice && (
+                <div className="mt-6 bg-gray-900 border border-blue-500/40 rounded-xl p-5">
+                  <h2 className="text-blue-400 font-bold text-sm uppercase tracking-wide mb-3">
+                    🎯 Gameweek Advisor
+                  </h2>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    {gameweekAdvice}
+                  </p>
                 </div>
               )}
 

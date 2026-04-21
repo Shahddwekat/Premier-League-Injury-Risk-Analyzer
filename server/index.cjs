@@ -15,7 +15,6 @@ app.post("/api/analyze", async (req, res) => {
 
     const recentFixtures = fixtures?.response || [];
 
-    // ✅ Include player ID
     const playerStats = stats?.response?.map(p => ({
       id: p.player.id,
       name: p.player.name,
@@ -27,13 +26,14 @@ app.post("/api/analyze", async (req, res) => {
       injured: p.player.injured || false,
     })) || [];
 
-    // ✅ Filter by squad player IDs
-    const squadPlayerIds =
-      squad?.response?.[0]?.players?.map(p => p.id) || [];
+    const activePlayers = playerStats.filter(p => p.appearances > 0);
 
-    const filteredStats = playerStats.filter(p =>
-      squadPlayerIds.includes(p.id)
-    );
+    const squadPlayerIds = squad?.response?.[0]?.players?.map(p => p.id) || [];
+
+    const filteredStats = activePlayers.filter(p => squadPlayerIds.includes(p.id));
+
+    // Fallback if filtering too strict
+    const statsToUse = filteredStats.length >= 3 ? filteredStats : activePlayers;
 
     const injuriesRaw = injuryData?.response?.map(i => ({
       player: i.player.name,
@@ -41,7 +41,6 @@ app.post("/api/analyze", async (req, res) => {
       reason: i.player.reason,
     })) || [];
 
-    // Deduplicate injuries
     const seen = new Set();
     const injuries = injuriesRaw.filter(i => {
       if (seen.has(i.player)) return false;
@@ -49,7 +48,24 @@ app.post("/api/analyze", async (req, res) => {
       return true;
     });
 
-    console.log("Filtered player stats:", filteredStats.length);
+    // ✅ NEW: Fitness based on injury list
+    const injuredPlayerNames = injuries.map(i => i.player.toLowerCase());
+
+    const availablePlayers = statsToUse.filter(p =>
+      !injuredPlayerNames.some(name =>
+        name.includes(p.name.toLowerCase()) ||
+        p.name.toLowerCase().includes(name)
+      )
+    ).length;
+
+    const totalPlayers = statsToUse.length;
+    const squadFitnessScore = totalPlayers > 0
+      ? Math.round((availablePlayers / totalPlayers) * 100)
+      : 0;
+
+    console.log("Stats used:", statsToUse.length);
+    console.log("Injured players:", injuredPlayerNames.length);
+    console.log("Fitness score:", squadFitnessScore);
 
     const prompt = `You are a sports science analyst. Given the following Premier League squad data and recent fixture history, identify the top 3 players at highest injury risk.
 
@@ -59,7 +75,9 @@ Only consider players with more than 0 appearances. Focus on players with the hi
 
 If a player is currently injured, mark them High Risk regardless of minutes played.
 
-Squad with season stats: ${JSON.stringify(filteredStats)}
+CRITICAL: Only mention players that appear in the Squad data provided above. Never suggest or reference players not in this dataset.
+
+Squad with season stats: ${JSON.stringify(statsToUse)}
 
 Recent fixtures: ${JSON.stringify(recentFixtures)}
 
@@ -73,15 +91,15 @@ For each player give:
 For each player, copy their exact photo URL, appearances, minutes, age and position from the data provided.
 
 Respond in JSON format only. No markdown, no backticks. Raw JSON array:
-[{"name": "Player Name", "risk": "High", "explanation": "...", "photo": "photo_url_from_data", "appearances": 0, "minutes": 0, "age": 0, "position": "Position"}]`;
+[{"name": "Player Name", "risk": "High", "explanation": "...", "photo": "photo_url_from_data", "appearances": 0, "minutes": 0, "age": 0, "position": "Position"}]
+
+IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. Just the raw JSON array starting with [ and ending with ]`;
 
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
         model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "user", content: prompt },
-        ],
+        messages: [{ role: "user", content: prompt }],
       },
       {
         headers: {
@@ -93,10 +111,18 @@ Respond in JSON format only. No markdown, no backticks. Raw JSON array:
 
     const text = response.data.choices[0].message.content;
     const clean = text.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch (e) {
+      console.error("JSON parse error:", e.message);
+      console.error("Raw text:", text);
+      return res.status(500).json({ error: "Failed to parse AI response" });
+    }
 
     const enriched = parsed.map(player => {
-      const match = filteredStats.find(p =>
+      const match = statsToUse.find(p =>
         p.name.toLowerCase().includes(player.name.toLowerCase()) ||
         player.name.toLowerCase().includes(p.name.toLowerCase())
       );
@@ -118,9 +144,38 @@ Respond in JSON format only. No markdown, no backticks. Raw JSON array:
       };
     });
 
+    const teamName = squad?.response?.[0]?.team?.name || "This team";
+
+    const advisorPrompt = `You are a Fantasy Premier League advisor. Based on this squad analysis, give a 2-3 sentence gameweek recommendation.
+
+Team: ${teamName}
+Squad Fitness Score: ${squadFitnessScore}%
+High Risk Players: ${enriched.filter(p => p.risk === "High").map(p => p.name).join(", ")}
+Injury Count: ${injuries.length}
+
+Give practical fantasy advice about whether to pick players from this team, captaincy considerations, and transfer suggestions. Be specific and concise.`;
+
+    const advisorResponse = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: advisorPrompt }],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.VITE_GROQ_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const gameweekAdvice = advisorResponse.data.choices[0].message.content;
+
     res.json({
       content: [{ text: JSON.stringify(enriched) }],
       injuries: injuries,
+      gameweekAdvice: gameweekAdvice,
+      squadFitnessScore: squadFitnessScore,
     });
   } catch (error) {
     console.error("Groq API error:", error.response?.data || error.message);
