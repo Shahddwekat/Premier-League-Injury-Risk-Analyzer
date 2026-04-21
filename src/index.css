@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --pl-purple: #37003C;
+  --pl-green: #00FF85;
+  --pl-pink: #FF2882;
+  --pl-light: #F8F0FF;
+}
+
+body {
+  background-color: #37003C;
+  font-family: 'Arial Black', sans-serif;
+}

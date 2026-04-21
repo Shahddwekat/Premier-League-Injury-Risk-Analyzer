@@ -24,7 +24,6 @@ function App() {
       setLoading(true);
       setError(null);
 
-      // Reset state
       setPlayers([]);
       setTeamInjuries([]);
       setTeamLogo(null);
@@ -61,7 +60,6 @@ function App() {
       setPlayers(parsedPlayers);
       setGameweekAdvice(analysisData.gameweekAdvice || "");
       setSquadFitnessScore(analysisData.squadFitnessScore || 0);
-
     } catch (err) {
       console.error(err);
       setError("Failed to analyze squad. Please try again.");
@@ -76,13 +74,16 @@ function App() {
       <Route
         path="/"
         element={
-          <div className="min-h-screen bg-gray-950 text-white">
+          <div
+            className="min-h-screen text-white"
+            style={{ backgroundColor: "#37003C" }}
+          >
             <div className="max-w-4xl mx-auto px-6 py-12">
               <div className="text-center mb-10">
                 <h1 className="text-4xl font-bold text-white mb-2">
                   ⚽ Injury Risk Analyzer
                 </h1>
-                <p className="text-gray-400 text-lg">
+                <p className="text-gray-300 text-lg">
                   AI-powered player workload analysis
                 </p>
               </div>
@@ -103,11 +104,10 @@ function App() {
                 />
               )}
 
-              {/* ✅ Updated fitness bar */}
               {players.length > 0 && (
                 <div className="mt-6 bg-gray-900 border border-gray-700 rounded-xl p-5">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-400 text-sm font-semibold uppercase tracking-wide">
+                    <span className="text-gray-300 text-sm font-semibold uppercase tracking-wide">
                       Squad Fitness
                     </span>
                     <span className="text-white font-bold text-lg">
@@ -116,25 +116,35 @@ function App() {
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-3">
                     <div
-                      className={`h-3 rounded-full transition-all ${
-                        squadFitnessScore >= 75
-                          ? "bg-green-500"
-                          : squadFitnessScore >= 50
-                          ? "bg-yellow-500"
-                          : "bg-red-500"
-                      }`}
-                      style={{ width: `${squadFitnessScore}%` }}
+                      className="h-3 rounded-full transition-all"
+                      style={{
+                        width: `${squadFitnessScore}%`,
+                        backgroundColor:
+                          squadFitnessScore >= 75
+                            ? "#00FF85"
+                            : squadFitnessScore >= 50
+                            ? "#FF8C00"
+                            : "#FF2882",
+                      }}
                     />
                   </div>
                 </div>
               )}
 
               {gameweekAdvice && (
-                <div className="mt-6 bg-gray-900 border border-blue-500/40 rounded-xl p-5">
-                  <h2 className="text-blue-400 font-bold text-sm uppercase tracking-wide mb-3">
+                <div
+                  className="mt-6"
+                  style={{
+                    border: "1px solid #00FF8540",
+                    backgroundColor: "#4A003C",
+                    borderRadius: "16px",
+                    padding: "20px",
+                  }}
+                >
+                  <h2 className="text-green-300 font-bold text-sm uppercase tracking-wide mb-3">
                     🎯 Gameweek Advisor
                   </h2>
-                  <p className="text-gray-300 text-sm leading-relaxed">
+                  <p className="text-gray-200 text-sm leading-relaxed">
                     {gameweekAdvice}
                   </p>
                 </div>
@@ -147,7 +157,16 @@ function App() {
                       state: { injuries: teamInjuries, teamName, teamLogo },
                     })
                   }
-                  className="mt-6 w-full bg-orange-500/20 border border-orange-500/40 text-orange-300 font-semibold py-3 rounded-xl hover:bg-orange-500/30 transition-colors"
+                  className="mt-6 hover:opacity-90 transition-opacity"
+                  style={{
+                    border: "1px solid #FF288240",
+                    backgroundColor: "#FF28821A",
+                    borderRadius: "16px",
+                    padding: "12px",
+                    width: "100%",
+                    color: "#FF2882",
+                    fontWeight: "700",
+                  }}
                 >
                   ⚠️ View Full Injury Report ({teamInjuries.length} players)
                 </button>
