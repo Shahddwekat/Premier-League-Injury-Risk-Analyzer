@@ -6,6 +6,7 @@ const axios = require("axios");
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
+
 app.post("/api/analyze", async (req, res) => {
   try {
     const playersData = req.body.playersData;
@@ -13,22 +14,42 @@ app.post("/api/analyze", async (req, res) => {
     const { squad, fixtures, stats, injuries: injuryData } = playersData;
 
     const recentFixtures = fixtures?.response || [];
+
+    // ✅ Include player ID
     const playerStats = stats?.response?.map(p => ({
+      id: p.player.id,
       name: p.player.name,
       age: p.player.age,
       photo: p.player.photo,
       appearances: p.statistics[0]?.games?.appearences || 0,
       minutes: p.statistics[0]?.games?.minutes || 0,
       position: p.statistics[0]?.games?.position || "Unknown",
+      injured: p.player.injured || false,
     })) || [];
 
-    const injuries = injuryData?.response?.map(i => ({
+    // ✅ Filter by squad player IDs
+    const squadPlayerIds =
+      squad?.response?.[0]?.players?.map(p => p.id) || [];
+
+    const filteredStats = playerStats.filter(p =>
+      squadPlayerIds.includes(p.id)
+    );
+
+    const injuriesRaw = injuryData?.response?.map(i => ({
       player: i.player.name,
       type: i.player.type,
       reason: i.player.reason,
     })) || [];
 
-    console.log("Player stats:", JSON.stringify(playerStats, null, 2));
+    // Deduplicate injuries
+    const seen = new Set();
+    const injuries = injuriesRaw.filter(i => {
+      if (seen.has(i.player)) return false;
+      seen.add(i.player);
+      return true;
+    });
+
+    console.log("Filtered player stats:", filteredStats.length);
 
     const prompt = `You are a sports science analyst. Given the following Premier League squad data and recent fixture history, identify the top 3 players at highest injury risk.
 
@@ -38,7 +59,7 @@ Only consider players with more than 0 appearances. Focus on players with the hi
 
 If a player is currently injured, mark them High Risk regardless of minutes played.
 
-Squad with season stats: ${JSON.stringify(playerStats)}
+Squad with season stats: ${JSON.stringify(filteredStats)}
 
 Recent fixtures: ${JSON.stringify(recentFixtures)}
 
@@ -59,10 +80,7 @@ Respond in JSON format only. No markdown, no backticks. Raw JSON array:
       {
         model: "llama-3.3-70b-versatile",
         messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
+          { role: "user", content: prompt },
         ],
       },
       {
@@ -77,12 +95,17 @@ Respond in JSON format only. No markdown, no backticks. Raw JSON array:
     const clean = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean);
 
-    // Match photos from our data
     const enriched = parsed.map(player => {
-      const match = playerStats.find(p =>
+      const match = filteredStats.find(p =>
         p.name.toLowerCase().includes(player.name.toLowerCase()) ||
         player.name.toLowerCase().includes(p.name.toLowerCase())
       );
+
+      const playerInjuries = injuries.filter(i =>
+        i.player.toLowerCase().includes(player.name.toLowerCase()) ||
+        player.name.toLowerCase().includes(i.player.toLowerCase())
+      );
+
       return {
         ...player,
         photo: match?.photo || null,
@@ -90,10 +113,15 @@ Respond in JSON format only. No markdown, no backticks. Raw JSON array:
         minutes: match?.minutes || player.minutes,
         age: match?.age || player.age,
         position: match?.position || player.position,
+        injured: match?.injured || false,
+        injuryHistory: playerInjuries,
       };
     });
 
-    res.json({ content: [{ text: JSON.stringify(enriched) }] });
+    res.json({
+      content: [{ text: JSON.stringify(enriched) }],
+      injuries: injuries,
+    });
   } catch (error) {
     console.error("Groq API error:", error.response?.data || error.message);
     res.status(500).json({ error: "Failed to analyze workload" });

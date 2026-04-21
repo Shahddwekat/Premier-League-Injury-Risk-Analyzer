@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 const riskConfig = {
   High: { bg: "bg-gray-900", border: "border-red-500", badge: "bg-red-500", bar: "bg-red-500" },
   Medium: { bg: "bg-gray-900", border: "border-yellow-500", badge: "bg-yellow-500", bar: "bg-yellow-500" },
@@ -6,6 +8,7 @@ const riskConfig = {
 
 const PlayerCard = ({ player }) => {
   const config = riskConfig[player.risk] || riskConfig.Low;
+  const [showHistory, setShowHistory] = useState(false);
 
   return (
     <div className={`${config.bg} border ${config.border} rounded-2xl overflow-hidden`}>
@@ -41,9 +44,35 @@ const PlayerCard = ({ player }) => {
           </div>
         </div>
       </div>
+
       {/* Bottom section - explanation */}
       <div className="border-t border-gray-800 px-5 py-4">
         <p className="text-gray-300 text-sm leading-relaxed">{player.explanation}</p>
+      </div>
+
+      {/* Injury history toggle */}
+      <div className="border-t border-gray-800 px-5 py-3">
+        <button
+          onClick={() => setShowHistory(prev => !prev)}
+          className="text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-white transition-colors"
+        >
+          {showHistory ? "Hide Injury History ▲" : "View Injury History ▼"}
+        </button>
+
+        {showHistory && (
+          <div className="mt-3 space-y-2">
+            {player.injuryHistory?.length > 0 ? (
+              player.injuryHistory.map((injury, idx) => (
+                <div key={idx} className="bg-gray-800 rounded-lg px-4 py-3">
+                  <p className="text-white text-sm font-semibold">{injury.type}</p>
+                  <p className="text-gray-400 text-xs mt-0.5">{injury.reason}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-sm">No recent injuries recorded.</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
