@@ -17,12 +17,34 @@ function App() {
 
   const navigate = useNavigate();
 
+  const calculateFitnessScore = (players) => {
+    if (!players || players.length === 0) return 0;
+
+    const riskToFitness = {
+      High: 33,
+      Medium: 66,
+      Low: 100,
+    };
+
+    const totalScore = players.reduce((sum, player) => {
+      return sum + (riskToFitness[player.risk] ?? 100);
+    }, 0);
+
+    return Math.round(totalScore / players.length);
+  };
+
+  const fitnessScore = calculateFitnessScore(players);
+
   const handleTeamSelect = async (teamId) => {
     try {
       setLoading(true);
       setError(null);
+
+      // ✅ Reset all state cleanly
       setPlayers([]);
       setTeamInjuries([]);
+      setTeamLogo(null);
+      setTeamName("");
 
       const [squadData, fixtureData, statsData, injuryData] = await Promise.all([
         getSquad(teamId),
@@ -48,7 +70,6 @@ function App() {
       const content = analysisData.content?.[0]?.text || "[]";
       const clean = content.replace(/```json|```/g, "").trim();
       const parsedPlayers = JSON.parse(clean);
-      console.log("Parsed players:", parsedPlayers);
 
       setTeamInjuries(analysisData.injuries || []);
       setPlayers(parsedPlayers);
@@ -91,6 +112,31 @@ function App() {
                   alt="Team logo"
                   className="w-16 h-16 mx-auto mt-8"
                 />
+              )}
+
+              {players.length > 0 && (
+                <div className="mt-6 bg-gray-900 border border-gray-700 rounded-xl p-5">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-400 text-sm font-semibold uppercase tracking-wide">
+                      Squad Fitness
+                    </span>
+                    <span className="text-white font-bold text-lg">
+                      {fitnessScore}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-3">
+                    <div
+                      className={`h-3 rounded-full transition-all ${
+                        fitnessScore >= 75
+                          ? "bg-green-500"
+                          : fitnessScore >= 50
+                          ? "bg-yellow-500"
+                          : "bg-red-500"
+                      }`}
+                      style={{ width: `${fitnessScore}%` }}
+                    />
+                  </div>
+                </div>
               )}
 
               {teamInjuries.length > 0 && (
