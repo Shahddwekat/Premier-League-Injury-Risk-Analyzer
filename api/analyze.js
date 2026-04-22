@@ -1,5 +1,23 @@
 import axios from "axios";
 
+// ── In-memory cache ──
+const cache = new Map();
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour in ms
+
+function getCached(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(key, data) {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -8,6 +26,16 @@ export default async function handler(req, res) {
   try {
     const playersData = req.body.playersData;
     const { squad, fixtures, stats, injuries: injuryData } = playersData;
+
+    const teamId = squad?.response?.[0]?.team?.id;
+    const cacheKey = `team_${teamId}`;
+
+    // ── Return cached result if available ──
+    const cached = getCached(cacheKey);
+    if (cached) {
+      console.log(`Cache hit for team ${teamId}`);
+      return res.json(cached);
+    }
 
     const recentFixtures = fixtures?.response || [];
 
@@ -44,22 +72,22 @@ export default async function handler(req, res) {
 
     console.log("injuries length:", injuries.length);
 
-    const injuredPlayerNames = injuries.map(i => i.player.toLowerCase());
+    // ── FIXED: stricter name matching to avoid false positives ──
+    const injuredPlayerNames = injuries.map(i => i.player.toLowerCase().trim());
 
-    // Fall back to full squad if statsToUse is too small
-    const playersForFitness = statsToUse.length >= 3
-      ? statsToUse
-      : (squad?.response?.[0]?.players || []).map(p => ({ name: p.name }));
+    const availablePlayers = statsToUse.filter(p => {
+      const playerName = p.name.toLowerCase().trim();
+      return !injuredPlayerNames.some(injuredName => {
+        // Must be an exact match or last name match — not just "includes"
+        if (injuredName === playerName) return true;
+        const playerLastName = playerName.split(" ").pop();
+        const injuredLastName = injuredName.split(" ").pop();
+        // Last names must be at least 4 chars to avoid short false matches
+        return playerLastName.length >= 4 && playerLastName === injuredLastName;
+      });
+    }).length;
 
-    const availablePlayers = playersForFitness.filter(p =>
-      !injuredPlayerNames.some(name =>
-        name.includes(p.name.toLowerCase()) ||
-        p.name.toLowerCase().includes(name)
-      )
-    ).length;
-
-    const totalPlayers = playersForFitness.length;
-
+    const totalPlayers = statsToUse.length;
     const squadFitnessScore = totalPlayers > 0
       ? Math.round((availablePlayers / totalPlayers) * 100)
       : injuries.length > 0 ? 70 : 85;
@@ -94,7 +122,6 @@ Respond in JSON format only. No markdown, no backticks. Raw JSON array:
 
 IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. Just the raw JSON array starting with [ and ending with ]`;
 
-    // ── First Groq call: injury risk analysis ──
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -121,10 +148,12 @@ IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. 
 
     const enriched = parsed.map(player => {
       const match = statsToUse.find(p =>
+        p.name.toLowerCase() === player.name.toLowerCase() ||
         p.name.toLowerCase().includes(player.name.toLowerCase()) ||
         player.name.toLowerCase().includes(p.name.toLowerCase())
       );
       const playerInjuries = injuries.filter(i =>
+        i.player.toLowerCase() === player.name.toLowerCase() ||
         i.player.toLowerCase().includes(player.name.toLowerCase()) ||
         player.name.toLowerCase().includes(i.player.toLowerCase())
       );
@@ -151,7 +180,6 @@ Injury Count: ${injuries.length}
 
 Give practical fantasy advice about whether to pick players from this team, captaincy considerations, and transfer suggestions. Be specific and concise.`;
 
-    // ── Second Groq call: FPL advisor ──
     const advisorResponse = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -168,12 +196,17 @@ Give practical fantasy advice about whether to pick players from this team, capt
 
     const gameweekAdvice = advisorResponse.data.choices[0].message.content;
 
-    res.json({
+    const result = {
       content: [{ text: JSON.stringify(enriched) }],
       injuries,
       gameweekAdvice,
       squadFitnessScore,
-    });
+    };
+
+    // ── Cache the result ──
+    setCache(cacheKey, result);
+
+    res.json(result);
 
   } catch (error) {
     console.error("API error:", error.response?.data || error.message);
