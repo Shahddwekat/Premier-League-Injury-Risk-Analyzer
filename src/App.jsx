@@ -86,7 +86,7 @@ function App() {
               position: "fixed",
               top: 0,
               left: 0,
-              zIndex: 100
+              zIndex: 100,
             }} />
 
             {/* Header bar */}
@@ -98,28 +98,29 @@ function App() {
               zIndex: 99,
               backgroundColor: "#1A0020",
               borderBottom: "1px solid #3A1050",
-              padding: "12px 32px",
+              padding: "10px 16px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: "24px",
+              gap: "12px",
             }}>
               {/* Logo */}
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
-                <span style={{ fontSize: "24px" }}>⚽</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                <span style={{ fontSize: "20px" }}>⚽</span>
                 <div>
                   <h1 style={{
                     fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: "22px",
+                    fontSize: "18px",
                     letterSpacing: "0.1em",
                     color: "white",
                     lineHeight: 1,
                     margin: 0,
+                    whiteSpace: "nowrap",
                   }}>
                     Injury Risk Analyzer
                   </h1>
                   <p style={{
-                    fontSize: "10px",
+                    fontSize: "9px",
                     color: "#00FF85",
                     letterSpacing: "0.2em",
                     textTransform: "uppercase",
@@ -131,22 +132,25 @@ function App() {
                 </div>
               </div>
 
-              {/* Team selector in header */}
+              {/* Team selector */}
               <TeamSearch onTeamSelect={handleTeamSelect} loading={loading} />
 
-              {/* PL badge */}
-              <div style={{
-                backgroundColor: "#2D0040",
-                border: "1px solid #6A2080",
-                borderRadius: "8px",
-                padding: "6px 14px",
-                fontSize: "11px",
-                color: "#C0A0C0",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                fontWeight: "600",
-                flexShrink: 0,
-              }}>
+              {/* PL badge — hidden on mobile, visible on md+ */}
+              <div
+                className="hidden md:block"
+                style={{
+                  backgroundColor: "#2D0040",
+                  border: "1px solid #6A2080",
+                  borderRadius: "8px",
+                  padding: "6px 14px",
+                  fontSize: "11px",
+                  color: "#C0A0C0",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  fontWeight: "600",
+                  flexShrink: 0,
+                }}
+              >
                 Premier League · 2024/25
               </div>
             </div>
@@ -154,16 +158,14 @@ function App() {
             {/* Spacer for fixed header */}
             <div style={{ height: "80px" }} />
 
-            <div className="max-w-4xl mx-auto px-6 py-12">
-              <div style={{ paddingTop: "48px" }}>
-                {/* Feature cards - only show before analysis */}
+            <div className="max-w-4xl mx-auto px-4 py-8">
+              <div style={{ paddingTop: "24px" }}>
+                {/* Feature cards — stacked on mobile, 3 cols on sm+ */}
                 {!players.length && !loading && (
-                  <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "16px",
-                    marginTop: "40px",
-                  }}>
+                  <div
+                    className="grid grid-cols-1 sm:grid-cols-3"
+                    style={{ gap: "16px", marginTop: "24px" }}
+                  >
                     {[
                       { icon: "🏥", title: "Injury Risk", desc: "AI analysis of player workload and injury probability" },
                       { icon: "📊", title: "Squad Fitness", desc: "Real-time fitness score based on squad availability" },
@@ -223,7 +225,7 @@ function App() {
                       color: "white",
                       letterSpacing: "0.05em",
                       margin: 0,
-                      lineHeight: 1.1
+                      lineHeight: 1.1,
                     }}>
                       {teamName}
                     </h2>
@@ -262,7 +264,7 @@ function App() {
                         ? "0 0 12px #00FF8560"
                         : squadFitnessScore >= 50
                         ? "0 0 12px #FF8C0060"
-                        : "0 0 12px #FF288260"
+                        : "0 0 12px #FF288260",
                     }} />
                   </div>
                 </div>

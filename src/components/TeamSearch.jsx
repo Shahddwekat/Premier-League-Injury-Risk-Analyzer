@@ -32,7 +32,7 @@ const TeamSearch = ({ onTeamSelect, loading }) => {
   };
 
   return (
-    <div className="flex gap-3 justify-center">
+    <div style={{ display: "flex", gap: "8px", flex: 1, maxWidth: "480px" }}>
       <select
         value={selectedTeam}
         onChange={(e) => setSelectedTeam(e.target.value)}
@@ -41,12 +41,13 @@ const TeamSearch = ({ onTeamSelect, loading }) => {
           border: "1px solid #6A2080",
           color: "white",
           borderRadius: "12px",
-          padding: "12px 20px",
-          fontSize: "15px",
+          padding: "10px 12px",
+          fontSize: "14px",
           fontWeight: "600",
           outline: "none",
           cursor: "pointer",
-          minWidth: "200px",
+          flex: 1,
+          minWidth: 0,
         }}
       >
         <option value="">Select a team</option>
@@ -60,21 +61,24 @@ const TeamSearch = ({ onTeamSelect, loading }) => {
         onClick={handleAnalyze}
         disabled={loading || !selectedTeam}
         style={{
-          background: loading || !selectedTeam
-            ? "#3A2040"
-            : "linear-gradient(135deg, #00FF85, #00CC6A)",
+          background:
+            loading || !selectedTeam
+              ? "#3A2040"
+              : "linear-gradient(135deg, #00FF85, #00CC6A)",
           color: loading || !selectedTeam ? "#6A5070" : "#1A0020",
           border: "none",
           borderRadius: "12px",
-          padding: "12px 28px",
-          fontSize: "15px",
+          padding: "10px 16px",
+          fontSize: "13px",
           fontWeight: "800",
           cursor: loading || !selectedTeam ? "not-allowed" : "pointer",
           letterSpacing: "0.05em",
           textTransform: "uppercase",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
         }}
       >
-        {loading ? "Analyzing..." : "Analyze Squad"}
+        {loading ? "..." : "Analyze"}
       </button>
     </div>
   );
