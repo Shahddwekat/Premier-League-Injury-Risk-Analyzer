@@ -80,6 +80,7 @@ Respond in JSON format only. No markdown, no backticks. Raw JSON array:
 
 IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. Just the raw JSON array starting with [ and ending with ]`;
 
+    // ── First Groq call: injury risk analysis ──
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -88,7 +89,7 @@ IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. 
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.VITE_GROQ_KEY}`,
+          Authorization: `Bearer ${process.env.GROQ_KEY || process.env.VITE_GROQ_KEY}`,
           "Content-Type": "application/json",
         },
       }
@@ -136,6 +137,7 @@ Injury Count: ${injuries.length}
 
 Give practical fantasy advice about whether to pick players from this team, captaincy considerations, and transfer suggestions. Be specific and concise.`;
 
+    // ── Second Groq call: FPL advisor ──
     const advisorResponse = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -144,7 +146,7 @@ Give practical fantasy advice about whether to pick players from this team, capt
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.VITE_GROQ_KEY}`,
+          Authorization: `Bearer ${process.env.GROQ_KEY || process.env.VITE_GROQ_KEY}`,
           "Content-Type": "application/json",
         },
       }
