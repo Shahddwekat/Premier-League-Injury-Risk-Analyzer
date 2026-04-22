@@ -27,6 +27,8 @@ export default async function handler(req, res) {
     const filteredStats = activePlayers.filter(p => squadPlayerIds.includes(p.id));
     const statsToUse = filteredStats.length >= 3 ? filteredStats : activePlayers;
 
+    console.log("statsToUse length:", statsToUse.length);
+
     const injuriesRaw = injuryData?.response?.map(i => ({
       player: i.player.name,
       type: i.player.type,
@@ -40,17 +42,29 @@ export default async function handler(req, res) {
       return true;
     });
 
+    console.log("injuries length:", injuries.length);
+
     const injuredPlayerNames = injuries.map(i => i.player.toLowerCase());
-    const availablePlayers = statsToUse.filter(p =>
+
+    // Fall back to full squad if statsToUse is too small
+    const playersForFitness = statsToUse.length >= 3
+      ? statsToUse
+      : (squad?.response?.[0]?.players || []).map(p => ({ name: p.name }));
+
+    const availablePlayers = playersForFitness.filter(p =>
       !injuredPlayerNames.some(name =>
         name.includes(p.name.toLowerCase()) ||
         p.name.toLowerCase().includes(name)
       )
     ).length;
-    const totalPlayers = statsToUse.length;
+
+    const totalPlayers = playersForFitness.length;
+
     const squadFitnessScore = totalPlayers > 0
       ? Math.round((availablePlayers / totalPlayers) * 100)
-      : 0;
+      : injuries.length > 0 ? 70 : 85;
+
+    console.log("squadFitnessScore:", squadFitnessScore);
 
     const prompt = `You are a sports science analyst. Given the following Premier League squad data and recent fixture history, identify the top 3 players at highest injury risk.
 
