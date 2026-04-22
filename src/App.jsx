@@ -23,7 +23,6 @@ function App() {
     try {
       setLoading(true);
       setError(null);
-
       setPlayers([]);
       setTeamInjuries([]);
       setTeamLogo(null);
@@ -39,11 +38,8 @@ function App() {
       ]);
 
       const team = squadData?.response?.[0]?.team || {};
-      const logo = team.logo || null;
-      const name = team.name || "";
-
-      setTeamLogo(logo);
-      setTeamName(name);
+      setTeamLogo(team.logo || null);
+      setTeamName(team.name || "");
 
       const analysisData = await analyzeWorkload({
         squad: squadData,
@@ -74,10 +70,32 @@ function App() {
       <Route
         path="/"
         element={
-          <div
-            className="min-h-screen text-white"
-            style={{ backgroundColor: "#1A0020" }}
-          >
+          <div className="min-h-screen text-white" style={{ backgroundColor: "#1A0020" }}>
+
+            <style>{`
+              .desktop-selector { display: flex; }
+              .mobile-selector  { display: none; }
+              .feature-grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 16px;
+                margin-top: 16px;
+              }
+              .header-spacer { height: 72px; }
+
+              @media (max-width: 640px) {
+                .desktop-selector { display: none; }
+                .mobile-selector  { display: block; }
+                .header-spacer    { height: 118px; }
+              }
+
+              @media (min-width: 641px) {
+                .feature-grid {
+                  grid-template-columns: repeat(3, 1fr);
+                }
+              }
+            `}</style>
+
             {/* Top stripe */}
             <div style={{
               height: "3px",
@@ -89,8 +107,8 @@ function App() {
               zIndex: 100,
             }} />
 
-            {/* Header bar */}
-            <div style={{
+            {/* Header */}
+            <header style={{
               position: "fixed",
               top: "3px",
               left: 0,
@@ -98,47 +116,50 @@ function App() {
               zIndex: 99,
               backgroundColor: "#1A0020",
               borderBottom: "1px solid #3A1050",
-              padding: "10px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "12px",
             }}>
-              {/* Logo */}
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                <span style={{ fontSize: "20px" }}>⚽</span>
-                <div>
-                  <h1 style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: "18px",
-                    letterSpacing: "0.1em",
-                    color: "white",
-                    lineHeight: 1,
-                    margin: 0,
-                    whiteSpace: "nowrap",
-                  }}>
-                    Injury Risk Analyzer
-                  </h1>
-                  <p style={{
-                    fontSize: "9px",
-                    color: "#00FF85",
-                    letterSpacing: "0.2em",
-                    textTransform: "uppercase",
-                    margin: 0,
-                    marginTop: "2px",
-                  }}>
-                    AI-Powered Analysis
-                  </p>
+              {/* Row 1: logo + badge */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "16px",
+                padding: "12px 24px",
+              }}>
+                {/* Logo */}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+                  <span style={{ fontSize: "22px" }}>⚽</span>
+                  <div>
+                    <h1 style={{
+                      fontFamily: "'Bebas Neue', sans-serif",
+                      fontSize: "20px",
+                      letterSpacing: "0.1em",
+                      color: "white",
+                      lineHeight: 1,
+                      margin: 0,
+                      whiteSpace: "nowrap",
+                    }}>
+                      Injury Risk Analyzer
+                    </h1>
+                    <p style={{
+                      fontSize: "9px",
+                      color: "#00FF85",
+                      letterSpacing: "0.2em",
+                      textTransform: "uppercase",
+                      margin: 0,
+                      marginTop: "2px",
+                    }}>
+                      AI-Powered Analysis
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              {/* Team selector */}
-              <TeamSearch onTeamSelect={handleTeamSelect} loading={loading} />
+                {/* Desktop selector — center */}
+                <div className="desktop-selector" style={{ flex: 1, maxWidth: "460px" }}>
+                  <TeamSearch onTeamSelect={handleTeamSelect} loading={loading} />
+                </div>
 
-              {/* PL badge — hidden on mobile, visible on md+ */}
-              <div
-                className="hidden md:block"
-                style={{
+                {/* PL badge */}
+                <div style={{
                   backgroundColor: "#2D0040",
                   border: "1px solid #6A2080",
                   borderRadius: "8px",
@@ -149,23 +170,27 @@ function App() {
                   textTransform: "uppercase",
                   fontWeight: "600",
                   flexShrink: 0,
-                }}
-              >
-                Premier League · 2024/25
+                  whiteSpace: "nowrap",
+                }}>
+                  Premier League · 2024/25
+                </div>
               </div>
-            </div>
 
-            {/* Spacer for fixed header */}
-            <div style={{ height: "80px" }} />
+              {/* Mobile selector — second row */}
+              <div className="mobile-selector" style={{ padding: "0 16px 12px" }}>
+                <TeamSearch onTeamSelect={handleTeamSelect} loading={loading} />
+              </div>
+            </header>
+
+            {/* Spacer */}
+            <div className="header-spacer" />
 
             <div className="max-w-4xl mx-auto px-4 py-8">
-              <div style={{ paddingTop: "24px" }}>
-                {/* Feature cards — stacked on mobile, 3 cols on sm+ */}
+              <div style={{ paddingTop: "16px" }}>
+
+                {/* Feature cards */}
                 {!players.length && !loading && (
-                  <div
-                    className="grid grid-cols-1 sm:grid-cols-3"
-                    style={{ gap: "16px", marginTop: "24px" }}
-                  >
+                  <div className="feature-grid">
                     {[
                       { icon: "🏥", title: "Injury Risk", desc: "AI analysis of player workload and injury probability" },
                       { icon: "📊", title: "Squad Fitness", desc: "Real-time fitness score based on squad availability" },
@@ -210,11 +235,7 @@ function App() {
                   border: "1px solid #4A1060",
                   borderRadius: "16px",
                 }}>
-                  <img
-                    src={teamLogo}
-                    alt="Team logo"
-                    style={{ width: "56px", height: "56px", objectFit: "contain" }}
-                  />
+                  <img src={teamLogo} alt="Team logo" style={{ width: "56px", height: "56px", objectFit: "contain" }} />
                   <div>
                     <p style={{ color: "#C0A0C0", fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", margin: 0 }}>
                       Currently Analyzing
@@ -271,31 +292,22 @@ function App() {
               )}
 
               {gameweekAdvice && (
-                <div
-                  className="mt-6"
-                  style={{
-                    border: "1px solid #00FF8540",
-                    backgroundColor: "#4A003C",
-                    borderRadius: "16px",
-                    padding: "20px",
-                  }}
-                >
+                <div className="mt-6" style={{
+                  border: "1px solid #00FF8540",
+                  backgroundColor: "#4A003C",
+                  borderRadius: "16px",
+                  padding: "20px",
+                }}>
                   <h2 className="text-green-300 font-bold text-sm uppercase tracking-wide mb-3">
                     🎯 Gameweek Advisor
                   </h2>
-                  <p className="text-gray-200 text-sm leading-relaxed">
-                    {gameweekAdvice}
-                  </p>
+                  <p className="text-gray-200 text-sm leading-relaxed">{gameweekAdvice}</p>
                 </div>
               )}
 
               {teamInjuries.length > 0 && (
                 <button
-                  onClick={() =>
-                    navigate("/injuries", {
-                      state: { injuries: teamInjuries, teamName, teamLogo },
-                    })
-                  }
+                  onClick={() => navigate("/injuries", { state: { injuries: teamInjuries, teamName, teamLogo } })}
                   className="mt-6 hover:opacity-90 transition-opacity"
                   style={{
                     border: "1px solid #FF288240",
@@ -313,17 +325,13 @@ function App() {
 
               {loading && (
                 <div className="mt-8 grid gap-4">
-                  {[1, 2, 3].map((i) => (
-                    <SkeletonCard key={i} />
-                  ))}
+                  {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
                 </div>
               )}
 
               {players.length > 0 && (
                 <div className="mt-8 grid gap-4">
-                  {players.map((player, index) => (
-                    <PlayerCard key={index} player={player} />
-                  ))}
+                  {players.map((player, index) => <PlayerCard key={index} player={player} />)}
                 </div>
               )}
             </div>
