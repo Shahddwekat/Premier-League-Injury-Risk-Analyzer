@@ -1,16 +1,59 @@
-# React + Vite
+# ⚽ Premier League Injury Risk Analyzer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full stack AI-powered web application that analyzes Premier League squad fitness and injury risk using real football data and large language models.
 
-Currently, two official plugins are available:
+## 🔗 Live Demo
+[premier-league-injury-risk-analyzer.vercel.app](https://premier-league-injury-risk-analyzer.vercel.app)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Features
+- **AI Injury Risk Analysis** : identifies the top 3 players at highest injury risk based on age, position, minutes played, and injury history
+- **Squad Fitness Score** : calculates overall team fitness based on real injury data
+- **Gameweek Advisor** : AI generated Fantasy Premier League recommendations
+- **Full Injury Report** : dedicated page showing all currently injured players with injury type and reason
+- **Player Stats** : real season data including appearances, minutes, position, and age
+- **All 20 Premier League Teams** : complete 2024/25 season coverage
+- **Loading Skeletons** : professional loading states while data is fetched
 
-## React Compiler
+## 🛠 Tech Stack
+- **Frontend:** React, Vite, Tailwind CSS, React Router
+- **Backend:** Vercel Serverless Functions
+- **AI Model:** Groq API (Llama 3.3 70B)
+- **Data:** API-Football (squad data, player stats, injury reports)
+- **Deployment:** Vercel
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🏗 Architecture
+The app uses a serverless backend to protect API keys and act as a proxy between the React frontend and external APIs. When a user selects a team, the app makes 4 parallel API calls to fetch squad data, fixtures, player statistics, and injury reports. This data is sent to the Groq AI model which returns a structured injury risk assessment.  ## ⚙️ Running Locally
 
-## Expanding the ESLint configuration
+1. Clone the repository
+```bash
+git clone https://github.com/Shahddwekat/Premier-League-Injury-Risk-Analyzer.git
+cd Premier-League-Injury-Risk-Analyzer
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+2. Install dependencies
+```bash
+npm install
+```
+
+3. Create a `.env` file in the root:4. Start the development server
+```bash
+npm run dev
+```
+
+5. In a separate terminal, start the local API server
+```bash
+node server/index.cjs
+```
+
+## 📊 Data Sources
+- **[API-Football](https://www.api-football.com/)** : squad rosters, player statistics, injury reports
+- **[Groq API](https://groq.com/)** : LLM inference using Llama 3.3 70B
+
+## ⚠️ Limitations
+- Squad data reflects the 2024/25 season from API-Football and may not include mid-season transfers
+- Free tier limited to 100 API requests per day
+- Player statistics are based on season totals, not recent match-by-match workload
+- Injury risk assessment is AI-generated based on available data and should not be used for medical decisions
+
+## 👩‍💻 Author
+Shahd Dwekat
