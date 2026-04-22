@@ -2,14 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --pl-purple: #37003C;
-  --pl-green: #00FF85;
-  --pl-pink: #FF2882;
-  --pl-light: #F8F0FF;
-}
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap');
 
 body {
-  background-color: #37003C;
-  font-family: 'Arial Black', sans-serif;
+  background-color: #1A0020;
+  background-image: 
+    radial-gradient(ellipse at 20% 50%, #37003C 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, #2D0040 0%, transparent 50%);
 }

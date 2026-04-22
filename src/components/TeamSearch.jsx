@@ -36,7 +36,18 @@ const TeamSearch = ({ onTeamSelect, loading }) => {
       <select
         value={selectedTeam}
         onChange={(e) => setSelectedTeam(e.target.value)}
-        className="bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500"
+        style={{
+          backgroundColor: "#2D0040",
+          border: "1px solid #6A2080",
+          color: "white",
+          borderRadius: "12px",
+          padding: "12px 20px",
+          fontSize: "15px",
+          fontWeight: "600",
+          outline: "none",
+          cursor: "pointer",
+          minWidth: "200px",
+        }}
       >
         <option value="">Select a team</option>
         {[...TEAMS].sort((a, b) => a.name.localeCompare(b.name)).map((team) => (
@@ -48,7 +59,20 @@ const TeamSearch = ({ onTeamSelect, loading }) => {
       <button
         onClick={handleAnalyze}
         disabled={loading || !selectedTeam}
-        className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+        style={{
+          background: loading || !selectedTeam
+            ? "#3A2040"
+            : "linear-gradient(135deg, #00FF85, #00CC6A)",
+          color: loading || !selectedTeam ? "#6A5070" : "#1A0020",
+          border: "none",
+          borderRadius: "12px",
+          padding: "12px 28px",
+          fontSize: "15px",
+          fontWeight: "800",
+          cursor: loading || !selectedTeam ? "not-allowed" : "pointer",
+          letterSpacing: "0.05em",
+          textTransform: "uppercase",
+        }}
       >
         {loading ? "Analyzing..." : "Analyze Squad"}
       </button>
