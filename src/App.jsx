@@ -75,6 +75,7 @@ function App() {
             <style>{`
               .desktop-selector { display: flex; }
               .mobile-selector  { display: none; }
+              .pl-badge         { display: flex; }
               .feature-grid {
                 display: grid;
                 grid-template-columns: 1fr;
@@ -86,6 +87,7 @@ function App() {
               @media (max-width: 640px) {
                 .desktop-selector { display: none; }
                 .mobile-selector  { display: block; }
+                .pl-badge         { display: none; }
                 .header-spacer    { height: 118px; }
               }
 
@@ -117,7 +119,7 @@ function App() {
               backgroundColor: "#1A0020",
               borderBottom: "1px solid #3A1050",
             }}>
-              {/* Row 1: logo + badge */}
+              {/* Row 1: logo + desktop selector + badge */}
               <div style={{
                 display: "flex",
                 alignItems: "center",
@@ -153,30 +155,33 @@ function App() {
                   </div>
                 </div>
 
-                {/* Desktop selector — center */}
+                {/* Desktop selector */}
                 <div className="desktop-selector" style={{ flex: 1, maxWidth: "460px" }}>
                   <TeamSearch onTeamSelect={handleTeamSelect} loading={loading} />
                 </div>
 
-                {/* PL badge */}
-                <div style={{
-                  backgroundColor: "#2D0040",
-                  border: "1px solid #6A2080",
-                  borderRadius: "8px",
-                  padding: "6px 14px",
-                  fontSize: "11px",
-                  color: "#C0A0C0",
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  fontWeight: "600",
-                  flexShrink: 0,
-                  whiteSpace: "nowrap",
-                }}>
+                {/* PL badge — hidden on mobile */}
+                <div
+                  className="pl-badge"
+                  style={{
+                    backgroundColor: "#2D0040",
+                    border: "1px solid #6A2080",
+                    borderRadius: "8px",
+                    padding: "6px 14px",
+                    fontSize: "11px",
+                    color: "#C0A0C0",
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    fontWeight: "600",
+                    flexShrink: 0,
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   Premier League · 2024/25
                 </div>
               </div>
 
-              {/* Mobile selector — second row */}
+              {/* Row 2: mobile selector only */}
               <div className="mobile-selector" style={{ padding: "0 16px 12px" }}>
                 <TeamSearch onTeamSelect={handleTeamSelect} loading={loading} />
               </div>
