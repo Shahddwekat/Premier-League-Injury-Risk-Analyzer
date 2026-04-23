@@ -22,10 +22,23 @@ export default async function handler(req, res) {
       injured: p.player.injured || false,
     })) || [];
 
-    const activePlayers = playerStats.filter(p => p.appearances > 0);
     const squadPlayerIds = squad?.response?.[0]?.players?.map(p => p.id) || [];
-    const filteredStats = activePlayers.filter(p => squadPlayerIds.includes(p.id));
-    const statsToUse = filteredStats.length >= 3 ? filteredStats : activePlayers;
+
+    // Progressively relax filters until we have at least 11 players
+    const activePlayers = playerStats.filter(p => p.appearances > 0);
+    const filteredActive = activePlayers.filter(p => squadPlayerIds.includes(p.id));
+    const filteredAll = playerStats.filter(p => squadPlayerIds.includes(p.id));
+
+    let statsToUse;
+    if (filteredActive.length >= 11) {
+      statsToUse = filteredActive;
+    } else if (activePlayers.length >= 11) {
+      statsToUse = activePlayers;
+    } else if (filteredAll.length >= 11) {
+      statsToUse = filteredAll;
+    } else {
+      statsToUse = playerStats;
+    }
 
     console.log("statsToUse length:", statsToUse.length);
 
@@ -46,7 +59,7 @@ export default async function handler(req, res) {
 
     const injuredPlayerNames = injuries.map(i => i.player.toLowerCase().trim());
 
-    // ── Tag each player in statsToUse with injury status ──
+    // Tag each player with injury status and default risk
     const fullSquad = statsToUse.map(p => {
       const playerName = p.name.toLowerCase().trim();
       const isInjured = injuredPlayerNames.some(injuredName => {
@@ -64,7 +77,7 @@ export default async function handler(req, res) {
       return {
         ...p,
         isInjured,
-        risk: isInjured ? "High" : "Low", // default, AI will override top 3
+        risk: isInjured ? "High" : "Low",
         injuryHistory: playerInjuries,
       };
     });
@@ -77,6 +90,9 @@ export default async function handler(req, res) {
 
     console.log("squadFitnessScore:", squadFitnessScore);
 
+    // Only send players with appearances to AI for risk analysis
+    const statsForAI = statsToUse.filter(p => p.appearances > 0);
+
     const prompt = `You are a sports science analyst. Given the following Premier League squad data and recent fixture history, identify the top 3 players at highest injury risk.
 
 Consider: player age, position, minutes played, and fixture congestion (how many games in the last 30 days).
@@ -87,7 +103,7 @@ If a player is currently injured, mark them High Risk regardless of minutes play
 
 CRITICAL: Only mention players that appear in the Squad data provided above. Never suggest or reference players not in this dataset.
 
-Squad with season stats: ${JSON.stringify(statsToUse)}
+Squad with season stats: ${JSON.stringify(statsForAI)}
 
 Recent fixtures: ${JSON.stringify(recentFixtures)}
 
@@ -129,7 +145,7 @@ IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. 
       return res.status(500).json({ error: "Failed to parse AI response" });
     }
 
-    // ── Top 3 risk players enriched ──
+    // Enrich top 3 risk players
     const enriched = parsed.map(player => {
       const match = statsToUse.find(p =>
         p.name.toLowerCase() === player.name.toLowerCase() ||
@@ -153,8 +169,7 @@ IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. 
       };
     });
 
-    // ── Merge AI risk onto fullSquad ──
-    const enrichedNames = enriched.map(p => p.name.toLowerCase());
+    // Merge AI risk onto fullSquad
     const fullSquadWithRisk = fullSquad.map(p => {
       const aiMatch = enriched.find(e =>
         e.name.toLowerCase() === p.name.toLowerCase() ||
