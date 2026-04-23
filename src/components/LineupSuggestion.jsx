@@ -1,12 +1,5 @@
 import { useState } from "react";
 
-const POSITION_MAP = {
-  Goalkeeper: "GK",
-  Defender: "DEF",
-  Midfielder: "MID",
-  Attacker: "FWD",
-};
-
 const riskColor = {
   Low: "#00FF85",
   Medium: "#FF8C00",
@@ -15,11 +8,12 @@ const riskColor = {
 
 const PlayerBubble = ({ player }) => {
   const color = riskColor[player.risk] || "#00FF85";
+  const lastName = player.name.split(" ").pop();
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", width: "64px" }}>
       <div style={{
-        width: "48px",
-        height: "48px",
+        width: "44px",
+        height: "44px",
         borderRadius: "50%",
         overflow: "hidden",
         border: `2px solid ${color}`,
@@ -37,23 +31,22 @@ const PlayerBubble = ({ player }) => {
         fontSize: "10px",
         fontWeight: "700",
         textAlign: "center",
-        maxWidth: "60px",
         lineHeight: 1.2,
-        textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+        textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+        width: "100%",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
       }}>
-        {player.name.split(" ").pop()}
+        {lastName}
       </span>
-      <span style={{
+      <div style={{
+        width: "8px",
+        height: "8px",
+        borderRadius: "50%",
         backgroundColor: color,
-        color: color === "#00FF85" ? "#1A0020" : "white",
-        fontSize: "8px",
-        fontWeight: "800",
-        padding: "1px 6px",
-        borderRadius: "999px",
-        textTransform: "uppercase",
-      }}>
-        {POSITION_MAP[player.position] || player.position?.slice(0, 3).toUpperCase()}
-      </span>
+        flexShrink: 0,
+      }} />
     </div>
   );
 };
@@ -61,31 +54,33 @@ const PlayerBubble = ({ player }) => {
 const LineupSuggestion = ({ players, teamName }) => {
   const [open, setOpen] = useState(false);
 
-  // Sort by risk: Low first, then Medium, then High
+  // Sort: Low risk first, then Medium, then High
   const riskOrder = { Low: 0, Medium: 1, High: 2 };
   const sorted = [...players].sort((a, b) => (riskOrder[a.risk] ?? 1) - (riskOrder[b.risk] ?? 1));
 
   // Pick best 11 by position
-  const gks = sorted.filter(p => p.position === "Goalkeeper").slice(0, 1);
+  const gks  = sorted.filter(p => p.position === "Goalkeeper").slice(0, 1);
   const defs = sorted.filter(p => p.position === "Defender").slice(0, 4);
   const mids = sorted.filter(p => p.position === "Midfielder").slice(0, 3);
   const fwds = sorted.filter(p => p.position === "Attacker").slice(0, 3);
 
-  // Fill gaps if not enough in a position
-  const selected = [...gks, ...defs, ...mids, ...fwds];
-  const remaining = sorted.filter(p => !selected.includes(p));
-  while (selected.length < 11 && remaining.length > 0) {
-    selected.push(remaining.shift());
+  const picked = [...gks, ...defs, ...mids, ...fwds];
+
+  // Fill to 11 if positions are short
+  const unpicked = sorted.filter(p => !picked.includes(p));
+  while (picked.length < 11 && unpicked.length > 0) {
+    picked.push(unpicked.shift());
   }
 
-  const lineup = {
-    gk: selected.slice(0, 1),
-    def: selected.slice(1, 5),
-    mid: selected.slice(5, 8),
-    fwd: selected.slice(8, 11),
-  };
+  const finalGK   = picked.slice(0, 1);
+  const finalDEF  = picked.slice(1, 5);
+  const finalMID  = picked.slice(5, 8);
+  const finalFWD  = picked.slice(8, 11);
 
-  const rows = [lineup.fwd, lineup.mid, lineup.def, lineup.gk];
+  // Bench: next 4 lowest risk not in starting 11
+  const bench = sorted.filter(p => !picked.includes(p)).slice(0, 4);
+
+  const rows = [finalFWD, finalMID, finalDEF, finalGK];
 
   return (
     <div style={{ marginTop: "24px" }}>
@@ -93,7 +88,9 @@ const LineupSuggestion = ({ players, teamName }) => {
         onClick={() => setOpen(prev => !prev)}
         style={{
           width: "100%",
-          background: open ? "linear-gradient(135deg, #2D0040, #1A0028)" : "linear-gradient(135deg, #00FF85, #00CC6A)",
+          background: open
+            ? "linear-gradient(135deg, #2D0040, #1A0028)"
+            : "linear-gradient(135deg, #00FF85, #00CC6A)",
           color: open ? "#00FF85" : "#1A0020",
           border: open ? "1px solid #00FF8540" : "none",
           borderRadius: "16px",
@@ -125,63 +122,47 @@ const LineupSuggestion = ({ players, teamName }) => {
               Suggested Starting XI — {teamName}
             </p>
             <p style={{ color: "#8060A0", fontSize: "11px", margin: "4px 0 0 0" }}>
-              Based on injury risk · Low risk players prioritized · 4-3-3
+              4-3-3 · Low risk players prioritized · High risk players benched
             </p>
           </div>
 
           {/* Pitch */}
           <div style={{
             background: "linear-gradient(180deg, #1a5c2a 0%, #1e6b30 25%, #1a5c2a 50%, #1e6b30 75%, #1a5c2a 100%)",
-            padding: "24px 16px",
+            padding: "20px 12px",
             position: "relative",
-            minHeight: "420px",
+            minHeight: "400px",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-around",
+            gap: "8px",
           }}>
-
             {/* Pitch markings */}
             <div style={{
-              position: "absolute",
-              top: "50%",
-              left: "10%",
-              right: "10%",
-              height: "1px",
-              backgroundColor: "rgba(255,255,255,0.15)",
+              position: "absolute", top: "50%", left: "8%", right: "8%",
+              height: "1px", backgroundColor: "rgba(255,255,255,0.12)",
               transform: "translateY(-50%)",
             }} />
             <div style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              width: "80px",
-              height: "80px",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: "50%",
+              position: "absolute", top: "50%", left: "50%",
+              width: "70px", height: "70px",
+              border: "1px solid rgba(255,255,255,0.12)", borderRadius: "50%",
               transform: "translate(-50%, -50%)",
             }} />
             <div style={{
-              position: "absolute",
-              top: "5%",
-              left: "25%",
-              right: "25%",
-              height: "15%",
-              border: "1px solid rgba(255,255,255,0.15)",
+              position: "absolute", top: "4%", left: "28%", right: "28%",
+              height: "14%", border: "1px solid rgba(255,255,255,0.12)",
             }} />
             <div style={{
-              position: "absolute",
-              bottom: "5%",
-              left: "25%",
-              right: "25%",
-              height: "15%",
-              border: "1px solid rgba(255,255,255,0.15)",
+              position: "absolute", bottom: "4%", left: "28%", right: "28%",
+              height: "14%", border: "1px solid rgba(255,255,255,0.12)",
             }} />
 
-            {/* Player rows */}
+            {/* Player rows: FWD → MID → DEF → GK */}
             {rows.map((row, rowIdx) => (
               <div key={rowIdx} style={{
                 display: "flex",
-                justifyContent: "space-around",
+                justifyContent: "space-evenly",
                 alignItems: "center",
                 position: "relative",
                 zIndex: 1,
@@ -193,12 +174,31 @@ const LineupSuggestion = ({ players, teamName }) => {
             ))}
           </div>
 
+          {/* Bench */}
+          {bench.length > 0 && (
+            <div style={{
+              background: "linear-gradient(135deg, #1A0028, #150020)",
+              borderTop: "1px solid #3A1050",
+              padding: "14px 20px",
+            }}>
+              <p style={{ color: "#8060A0", fontSize: "10px", fontWeight: "800", letterSpacing: "0.2em", textTransform: "uppercase", margin: "0 0 12px 0" }}>
+                Bench
+              </p>
+              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+                {bench.map((player, i) => (
+                  <PlayerBubble key={i} player={player} />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Legend */}
           <div style={{
             background: "linear-gradient(135deg, #2D0040, #1A0028)",
             padding: "12px 20px",
             display: "flex",
             gap: "16px",
+            flexWrap: "wrap",
             borderTop: "1px solid #3A1050",
           }}>
             {[

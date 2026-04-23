@@ -10,6 +10,7 @@ import { getSquad, getTeamFixtures, getPlayerStats, getInjuries } from "./servic
 
 function App() {
   const [players, setPlayers] = useState([]);
+  const [fullSquad, setFullSquad] = useState([]);
   const [teamInjuries, setTeamInjuries] = useState([]);
   const [teamName, setTeamName] = useState("");
   const [gameweekAdvice, setGameweekAdvice] = useState("");
@@ -25,6 +26,7 @@ function App() {
       setLoading(true);
       setError(null);
       setPlayers([]);
+      setFullSquad([]);
       setTeamInjuries([]);
       setTeamLogo(null);
       setTeamName("");
@@ -55,6 +57,7 @@ function App() {
 
       setTeamInjuries(analysisData.injuries || []);
       setPlayers(parsedPlayers);
+      setFullSquad(analysisData.fullSquad || []);
       setGameweekAdvice(analysisData.gameweekAdvice || "");
       setSquadFitnessScore(analysisData.squadFitnessScore || 0);
     } catch (err) {
@@ -158,22 +161,19 @@ function App() {
                   <TeamSearch onTeamSelect={handleTeamSelect} loading={loading} />
                 </div>
 
-                <div
-                  className="pl-badge"
-                  style={{
-                    backgroundColor: "#2D0040",
-                    border: "1px solid #6A2080",
-                    borderRadius: "8px",
-                    padding: "6px 14px",
-                    fontSize: "11px",
-                    color: "#C0A0C0",
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    fontWeight: "600",
-                    flexShrink: 0,
-                    whiteSpace: "nowrap",
-                  }}
-                >
+                <div className="pl-badge" style={{
+                  backgroundColor: "#2D0040",
+                  border: "1px solid #6A2080",
+                  borderRadius: "8px",
+                  padding: "6px 14px",
+                  fontSize: "11px",
+                  color: "#C0A0C0",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  fontWeight: "600",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                }}>
                   Premier League · 2025/26
                 </div>
               </div>
@@ -263,9 +263,9 @@ function App() {
                 </div>
               )}
 
-              {/* Lineup suggestion */}
-              {players.length > 0 && (
-                <LineupSuggestion players={players} teamName={teamName} />
+              {/* Lineup suggestion — uses full squad */}
+              {fullSquad.length > 0 && (
+                <LineupSuggestion players={fullSquad} teamName={teamName} />
               )}
 
               {players.length > 0 && (

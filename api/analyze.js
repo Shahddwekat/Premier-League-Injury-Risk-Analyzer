@@ -44,22 +44,35 @@ export default async function handler(req, res) {
 
     console.log("injuries length:", injuries.length);
 
-    // ── Strict name matching to avoid false positives ──
     const injuredPlayerNames = injuries.map(i => i.player.toLowerCase().trim());
 
-    const availablePlayers = statsToUse.filter(p => {
+    // ── Tag each player in statsToUse with injury status ──
+    const fullSquad = statsToUse.map(p => {
       const playerName = p.name.toLowerCase().trim();
-      return !injuredPlayerNames.some(injuredName => {
+      const isInjured = injuredPlayerNames.some(injuredName => {
         if (injuredName === playerName) return true;
         const playerLastName = playerName.split(" ").pop();
         const injuredLastName = injuredName.split(" ").pop();
         return playerLastName.length >= 4 && playerLastName === injuredLastName;
       });
-    }).length;
+      const playerInjuries = injuries.filter(i => {
+        const iName = i.player.toLowerCase();
+        return iName === playerName ||
+          iName.includes(playerName) ||
+          playerName.includes(iName);
+      });
+      return {
+        ...p,
+        isInjured,
+        risk: isInjured ? "High" : "Low", // default, AI will override top 3
+        injuryHistory: playerInjuries,
+      };
+    });
 
-    const totalPlayers = statsToUse.length;
+    const availableCount = fullSquad.filter(p => !p.isInjured).length;
+    const totalPlayers = fullSquad.length;
     const squadFitnessScore = totalPlayers > 0
-      ? Math.round((availablePlayers / totalPlayers) * 100)
+      ? Math.round((availableCount / totalPlayers) * 100)
       : injuries.length > 0 ? 70 : 85;
 
     console.log("squadFitnessScore:", squadFitnessScore);
@@ -116,6 +129,7 @@ IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. 
       return res.status(500).json({ error: "Failed to parse AI response" });
     }
 
+    // ── Top 3 risk players enriched ──
     const enriched = parsed.map(player => {
       const match = statsToUse.find(p =>
         p.name.toLowerCase() === player.name.toLowerCase() ||
@@ -137,6 +151,17 @@ IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. 
         injured: match?.injured || false,
         injuryHistory: playerInjuries,
       };
+    });
+
+    // ── Merge AI risk onto fullSquad ──
+    const enrichedNames = enriched.map(p => p.name.toLowerCase());
+    const fullSquadWithRisk = fullSquad.map(p => {
+      const aiMatch = enriched.find(e =>
+        e.name.toLowerCase() === p.name.toLowerCase() ||
+        e.name.toLowerCase().includes(p.name.toLowerCase()) ||
+        p.name.toLowerCase().includes(e.name.toLowerCase())
+      );
+      return aiMatch ? { ...p, risk: aiMatch.risk } : p;
     });
 
     const teamName = squad?.response?.[0]?.team?.name || "This team";
@@ -168,6 +193,7 @@ Give practical fantasy advice about whether to pick players from this team, capt
 
     res.json({
       content: [{ text: JSON.stringify(enriched) }],
+      fullSquad: fullSquadWithRisk,
       injuries,
       gameweekAdvice,
       squadFitnessScore,
