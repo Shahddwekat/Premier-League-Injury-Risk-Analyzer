@@ -22,7 +22,8 @@ A full stack AI-powered web application that analyzes Premier League squad fitne
 - **Deployment:** Vercel
 
 ## 🏗 Architecture
-The app uses a serverless backend to protect API keys and act as a proxy between the React frontend and external APIs. When a user selects a team, the app makes 4 parallel API calls to fetch squad data, fixtures, player statistics, and injury reports. This data is sent to the Groq AI model which returns a structured injury risk assessment.  ## ⚙️ Running Locally
+The app uses a serverless backend to protect API keys and act as a proxy between the React frontend and external APIs. When a user selects a team, the app makes 4 parallel API calls to fetch squad data, fixtures, player statistics, and injury reports. This data is sent to the Groq AI model which returns a structured injury risk assessment. 
+## ⚙️ Running Locally
 
 1. Clone the repository
 ```bash
