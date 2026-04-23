@@ -1,23 +1,5 @@
 import axios from "axios";
 
-// ── In-memory cache ──
-const cache = new Map();
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour in ms
-
-function getCached(key) {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.timestamp > CACHE_TTL) {
-    cache.delete(key);
-    return null;
-  }
-  return entry.data;
-}
-
-function setCache(key, data) {
-  cache.set(key, { data, timestamp: Date.now() });
-}
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -26,16 +8,6 @@ export default async function handler(req, res) {
   try {
     const playersData = req.body.playersData;
     const { squad, fixtures, stats, injuries: injuryData } = playersData;
-
-    const teamId = squad?.response?.[0]?.team?.id;
-    const cacheKey = `team_${teamId}`;
-
-    // ── Return cached result if available ──
-    const cached = getCached(cacheKey);
-    if (cached) {
-      console.log(`Cache hit for team ${teamId}`);
-      return res.json(cached);
-    }
 
     const recentFixtures = fixtures?.response || [];
 
@@ -72,17 +44,15 @@ export default async function handler(req, res) {
 
     console.log("injuries length:", injuries.length);
 
-    // ── FIXED: stricter name matching to avoid false positives ──
+    // ── Strict name matching to avoid false positives ──
     const injuredPlayerNames = injuries.map(i => i.player.toLowerCase().trim());
 
     const availablePlayers = statsToUse.filter(p => {
       const playerName = p.name.toLowerCase().trim();
       return !injuredPlayerNames.some(injuredName => {
-        // Must be an exact match or last name match — not just "includes"
         if (injuredName === playerName) return true;
         const playerLastName = playerName.split(" ").pop();
         const injuredLastName = injuredName.split(" ").pop();
-        // Last names must be at least 4 chars to avoid short false matches
         return playerLastName.length >= 4 && playerLastName === injuredLastName;
       });
     }).length;
@@ -196,17 +166,12 @@ Give practical fantasy advice about whether to pick players from this team, capt
 
     const gameweekAdvice = advisorResponse.data.choices[0].message.content;
 
-    const result = {
+    res.json({
       content: [{ text: JSON.stringify(enriched) }],
       injuries,
       gameweekAdvice,
       squadFitnessScore,
-    };
-
-    // ── Cache the result ──
-    setCache(cacheKey, result);
-
-    res.json(result);
+    });
 
   } catch (error) {
     console.error("API error:", error.response?.data || error.message);
