@@ -177,7 +177,7 @@ function App() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Premier League · 2024/25
+                  Premier League · 2025/26
                 </div>
               </div>
 

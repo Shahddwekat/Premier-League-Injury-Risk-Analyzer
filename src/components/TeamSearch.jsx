@@ -6,21 +6,21 @@ const TEAMS = [
   { id: 35, name: "Bournemouth" },
   { id: 55, name: "Brentford" },
   { id: 51, name: "Brighton" },
+  { id: 44, name: "Burnley" },
   { id: 49, name: "Chelsea" },
   { id: 52, name: "Crystal Palace" },
   { id: 45, name: "Everton" },
   { id: 36, name: "Fulham" },
-  { id: 57, name: "Ipswich" },
+  { id: 63, name: "Leeds United" },
   { id: 40, name: "Liverpool" },
   { id: 50, name: "Manchester City" },
   { id: 33, name: "Manchester United" },
   { id: 34, name: "Newcastle" },
   { id: 65, name: "Nottingham Forest" },
-  { id: 41, name: "Southampton" },
+  { id: 746, name: "Sunderland" },
   { id: 47, name: "Tottenham" },
-  { id: 46, name: "Leicester" },
-  { id: 39, name: "Wolves" },
   { id: 48, name: "West Ham" },
+  { id: 39, name: "Wolves" },
 ];
 
 const TeamSearch = ({ onTeamSelect, loading }) => {
@@ -32,7 +32,7 @@ const TeamSearch = ({ onTeamSelect, loading }) => {
   };
 
   return (
-    <div style={{ display: "flex", gap: "8px", flex: 1, maxWidth: "480px" }}>
+    <div style={{ display: "flex", gap: "8px", width: "100%" }}>
       <select
         value={selectedTeam}
         onChange={(e) => setSelectedTeam(e.target.value)}
@@ -61,15 +61,14 @@ const TeamSearch = ({ onTeamSelect, loading }) => {
         onClick={handleAnalyze}
         disabled={loading || !selectedTeam}
         style={{
-          background:
-            loading || !selectedTeam
-              ? "#3A2040"
-              : "linear-gradient(135deg, #00FF85, #00CC6A)",
+          background: loading || !selectedTeam
+            ? "#3A2040"
+            : "linear-gradient(135deg, #00FF85, #00CC6A)",
           color: loading || !selectedTeam ? "#6A5070" : "#1A0020",
           border: "none",
           borderRadius: "12px",
-          padding: "10px 16px",
-          fontSize: "13px",
+          padding: "10px 20px",
+          fontSize: "14px",
           fontWeight: "800",
           cursor: loading || !selectedTeam ? "not-allowed" : "pointer",
           letterSpacing: "0.05em",
@@ -78,7 +77,7 @@ const TeamSearch = ({ onTeamSelect, loading }) => {
           flexShrink: 0,
         }}
       >
-        {loading ? "..." : "Analyze"}
+        {loading ? "Analyzing..." : "Analyze"}
       </button>
     </div>
   );
