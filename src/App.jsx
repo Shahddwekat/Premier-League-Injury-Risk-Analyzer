@@ -4,6 +4,7 @@ import TeamSearch from "./components/TeamSearch";
 import PlayerCard from "./components/PlayerCard";
 import SkeletonCard from "./components/SkeletonCard";
 import InjuriesPage from "./pages/InjuryReport";
+import LineupSuggestion from "./components/LineupSuggestion";
 import { analyzeWorkload } from "./services/claudeApi";
 import { getSquad, getTeamFixtures, getPlayerStats, getInjuries } from "./services/footballApi";
 
@@ -119,7 +120,6 @@ function App() {
               backgroundColor: "#1A0020",
               borderBottom: "1px solid #3A1050",
             }}>
-              {/* Row 1: logo + desktop selector + badge */}
               <div style={{
                 display: "flex",
                 alignItems: "center",
@@ -127,7 +127,6 @@ function App() {
                 gap: "16px",
                 padding: "12px 24px",
               }}>
-                {/* Logo */}
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
                   <span style={{ fontSize: "22px" }}>⚽</span>
                   <div>
@@ -155,12 +154,10 @@ function App() {
                   </div>
                 </div>
 
-                {/* Desktop selector */}
                 <div className="desktop-selector" style={{ flex: 1, maxWidth: "460px" }}>
                   <TeamSearch onTeamSelect={handleTeamSelect} loading={loading} />
                 </div>
 
-                {/* PL badge — hidden on mobile */}
                 <div
                   className="pl-badge"
                   style={{
@@ -181,45 +178,52 @@ function App() {
                 </div>
               </div>
 
-              {/* Row 2: mobile selector only */}
               <div className="mobile-selector" style={{ padding: "0 16px 12px" }}>
                 <TeamSearch onTeamSelect={handleTeamSelect} loading={loading} />
               </div>
             </header>
 
-            {/* Spacer */}
             <div className="header-spacer" />
 
             <div className="max-w-4xl mx-auto px-4 py-8">
               <div style={{ paddingTop: "16px" }}>
-
-                {/* Feature cards */}
                 {!players.length && !loading && (
-                  <div className="feature-grid">
-                    {[
-                      { icon: "🏥", title: "Injury Risk", desc: "AI analysis of player workload and injury probability" },
-                      { icon: "📊", title: "Squad Fitness", desc: "Real-time fitness score based on squad availability" },
-                      { icon: "🎯", title: "FPL Advisor", desc: "Gameweek recommendations for fantasy managers" },
-                    ].map((card, i) => (
-                      <div key={i} style={{
-                        background: "linear-gradient(135deg, #2D0040, #1A0028)",
-                        border: "1px solid #3A1050",
-                        borderRadius: "16px",
-                        padding: "24px 20px",
-                        textAlign: "center",
-                      }}>
-                        <div style={{ fontSize: "28px", marginBottom: "12px" }}>{card.icon}</div>
-                        <h3 style={{
-                          fontFamily: "'Bebas Neue', sans-serif",
-                          fontSize: "18px",
-                          color: "white",
-                          letterSpacing: "0.1em",
-                          marginBottom: "8px",
-                        }}>{card.title}</h3>
-                        <p style={{ color: "#8060A0", fontSize: "12px", lineHeight: "1.5" }}>{card.desc}</p>
-                      </div>
-                    ))}
-                  </div>
+                  <>
+                    <div className="feature-grid">
+                      {[
+                        { icon: "🏥", title: "Injury Risk", desc: "AI analysis of player workload and injury probability" },
+                        { icon: "📊", title: "Squad Fitness", desc: "Real-time fitness score based on squad availability" },
+                        { icon: "🎯", title: "FPL Advisor", desc: "Gameweek recommendations for fantasy managers" },
+                      ].map((card, i) => (
+                        <div key={i} style={{
+                          background: "linear-gradient(135deg, #2D0040, #1A0028)",
+                          border: "1px solid #3A1050",
+                          borderRadius: "16px",
+                          padding: "24px 20px",
+                          textAlign: "center",
+                        }}>
+                          <div style={{ fontSize: "28px", marginBottom: "12px" }}>{card.icon}</div>
+                          <h3 style={{
+                            fontFamily: "'Bebas Neue', sans-serif",
+                            fontSize: "18px",
+                            color: "white",
+                            letterSpacing: "0.1em",
+                            marginBottom: "8px",
+                          }}>{card.title}</h3>
+                          <p style={{ color: "#8060A0", fontSize: "12px", lineHeight: "1.5" }}>{card.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{
+                      textAlign: "center",
+                      color: "#6A4080",
+                      fontSize: "11px",
+                      marginTop: "24px",
+                      letterSpacing: "0.1em",
+                    }}>
+                      ⚠️ Squad data powered by API-Football · Transfer data may have a delay
+                    </p>
+                  </>
                 )}
               </div>
 
@@ -257,6 +261,11 @@ function App() {
                     </h2>
                   </div>
                 </div>
+              )}
+
+              {/* Lineup suggestion */}
+              {players.length > 0 && (
+                <LineupSuggestion players={players} teamName={teamName} />
               )}
 
               {players.length > 0 && (
