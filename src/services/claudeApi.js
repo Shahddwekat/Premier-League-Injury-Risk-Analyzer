@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 function getCached(teamId) {
   try {
@@ -31,7 +31,6 @@ function setCache(teamId, data) {
 export const analyzeWorkload = async (playersData) => {
   const teamId = playersData?.squad?.response?.[0]?.team?.id;
 
-  // Return cached result if fresh
   if (teamId) {
     const cached = getCached(teamId);
     if (cached) {
@@ -42,7 +41,6 @@ export const analyzeWorkload = async (playersData) => {
 
   const response = await axios.post("/api/analyze", { playersData });
 
-  // Cache the result
   if (teamId) {
     setCache(teamId, response.data);
   }
