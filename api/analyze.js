@@ -23,6 +23,7 @@ export default async function handler(req, res) {
     })) || [];
 
     const squadPlayerIds = squad?.response?.[0]?.players?.map(p => p.id) || [];
+    const squadPlayers = squad?.response?.[0]?.players || [];
 
     // Progressively relax filters until we have at least 11 players
     const activePlayers = playerStats.filter(p => p.appearances > 0);
@@ -40,7 +41,33 @@ export default async function handler(req, res) {
       statsToUse = playerStats;
     }
 
-    console.log("statsToUse length:", statsToUse.length);
+    // Fill missing positions from squad endpoint
+    const statsWithPositions = statsToUse.map(p => {
+      if (p.position && p.position !== "Unknown") return p;
+      const squadMatch = squadPlayers.find(s => s.id === p.id);
+      return { ...p, position: squadMatch?.position || "Unknown" };
+    });
+
+    // If still not enough position variety, supplement with squad players missing from stats
+    const statsIds = new Set(statsWithPositions.map(p => p.id));
+    const missingSquadPlayers = squadPlayers
+      .filter(s => !statsIds.has(s.id))
+      .map(s => ({
+        id: s.id,
+        name: s.name,
+        age: s.age,
+        photo: s.photo,
+        appearances: 0,
+        minutes: 0,
+        position: s.position || "Unknown",
+        injured: false,
+      }));
+
+    // Merge: stats players + missing squad players to ensure full coverage
+    const fullPlayerPool = [...statsWithPositions, ...missingSquadPlayers];
+
+    console.log("fullPlayerPool length:", fullPlayerPool.length);
+    console.log("positions:", fullPlayerPool.map(p => p.position));
 
     const injuriesRaw = injuryData?.response?.map(i => ({
       player: i.player.name,
@@ -60,7 +87,7 @@ export default async function handler(req, res) {
     const injuredPlayerNames = injuries.map(i => i.player.toLowerCase().trim());
 
     // Tag each player with injury status and default risk
-    const fullSquad = statsToUse.map(p => {
+    const fullSquad = fullPlayerPool.map(p => {
       const playerName = p.name.toLowerCase().trim();
       const isInjured = injuredPlayerNames.some(injuredName => {
         if (injuredName === playerName) return true;
@@ -91,7 +118,7 @@ export default async function handler(req, res) {
     console.log("squadFitnessScore:", squadFitnessScore);
 
     // Only send players with appearances to AI for risk analysis
-    const statsForAI = statsToUse.filter(p => p.appearances > 0);
+    const statsForAI = statsWithPositions.filter(p => p.appearances > 0);
 
     const prompt = `You are a sports science analyst. Given the following Premier League squad data and recent fixture history, identify the top 3 players at highest injury risk.
 
@@ -147,7 +174,7 @@ IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. 
 
     // Enrich top 3 risk players
     const enriched = parsed.map(player => {
-      const match = statsToUse.find(p =>
+      const match = statsWithPositions.find(p =>
         p.name.toLowerCase() === player.name.toLowerCase() ||
         p.name.toLowerCase().includes(player.name.toLowerCase()) ||
         player.name.toLowerCase().includes(p.name.toLowerCase())
