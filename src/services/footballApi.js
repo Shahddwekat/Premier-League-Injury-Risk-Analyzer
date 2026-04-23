@@ -19,20 +19,21 @@ export const getSquad = async (teamId) => {
 
 export const getTeamFixtures = async (teamId) => {
   const response = await footballApi.get("/fixtures", {
-    params: { team: teamId, last: 10, season: 2024 },
+    params: { team: teamId, last: 10, season: 2025 },
   });
   return response.data;
 };
 
 export const getPlayerStats = async (teamId) => {
   const response = await footballApi.get("/players", {
-    params: { team: teamId, season: 2024 },
+    params: { team: teamId, season: 2025 },
   });
   return response.data;
 };
+
 export const getInjuries = async (teamId) => {
   const response = await footballApi.get("/injuries", {
-    params: { team: teamId, season: 2024 },
+    params: { team: teamId, season: 2025 },
   });
   return response.data;
 };
