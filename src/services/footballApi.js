@@ -21,6 +21,12 @@ export const getTeamFixtures = async (teamId) => {
   const response = await footballApi.get("/fixtures", {
     params: { team: teamId, last: 10, season: 2025 },
   });
+  if (!response.data?.response?.length) {
+    const fallback = await footballApi.get("/fixtures", {
+      params: { team: teamId, last: 10, season: 2024 },
+    });
+    return fallback.data;
+  }
   return response.data;
 };
 
@@ -28,6 +34,12 @@ export const getPlayerStats = async (teamId) => {
   const response = await footballApi.get("/players", {
     params: { team: teamId, season: 2025 },
   });
+  if (!response.data?.response?.length) {
+    const fallback = await footballApi.get("/players", {
+      params: { team: teamId, season: 2024 },
+    });
+    return fallback.data;
+  }
   return response.data;
 };
 
@@ -35,5 +47,11 @@ export const getInjuries = async (teamId) => {
   const response = await footballApi.get("/injuries", {
     params: { team: teamId, season: 2025 },
   });
+  if (!response.data?.response?.length) {
+    const fallback = await footballApi.get("/injuries", {
+      params: { team: teamId, season: 2024 },
+    });
+    return fallback.data;
+  }
   return response.data;
 };
