@@ -6,26 +6,17 @@ import SkeletonCard from "./components/SkeletonCard";
 import InjuriesPage from "./pages/InjuryReport";
 import LineupSuggestion from "./components/LineupSuggestion";
 import { analyzeWorkload } from "./services/claudeApi";
-import { getPlayerPhotos } from "./services/footballApi";
-
-const FPL_TO_APIFOOTBALL = {
-  1: 42, 2: 66, 3: 35, 4: 55, 5: 51,
-  6: 44, 7: 49, 8: 52, 9: 45, 10: 36,
-  11: 63, 12: 40, 13: 50, 14: 33, 15: 34,
-  16: 65, 17: 746, 18: 47, 19: 48, 20: 39,
-};
 
 function App() {
   const [players, setPlayers] = useState([]);
   const [fullSquad, setFullSquad] = useState([]);
   const [teamInjuries, setTeamInjuries] = useState([]);
   const [teamName, setTeamName] = useState("");
+  const [teamLogo, setTeamLogo] = useState(null);
   const [gameweekAdvice, setGameweekAdvice] = useState("");
   const [squadFitnessScore, setSquadFitnessScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [selectedFplId, setSelectedFplId] = useState(null);
-  const [teamLogo, setTeamLogo] = useState(null);
 
   const navigate = useNavigate();
 
@@ -37,19 +28,13 @@ function App() {
       setFullSquad([]);
       setTeamInjuries([]);
       setTeamName("");
+      setTeamLogo(null);
       setGameweekAdvice("");
       setSquadFitnessScore(0);
-      setSelectedFplId(team.fplId);
-      setTeamLogo(`https://resources.premierleague.com/premierleague/badges/t${team.fplId}.png`);
-
-      const apiFootballId = FPL_TO_APIFOOTBALL[team.fplId];
-      const photoMap = await getPlayerPhotos(apiFootballId);
 
       const analysisData = await analyzeWorkload({
         fplTeamId: team.fplId,
-        apiFootballId,
         teamName: team.name,
-        photoMap,
       });
 
       const content = analysisData.content?.[0]?.text || "[]";
@@ -62,6 +47,11 @@ function App() {
       setGameweekAdvice(analysisData.gameweekAdvice || "");
       setSquadFitnessScore(analysisData.squadFitnessScore || 0);
       setTeamName(analysisData.teamName || team.name);
+      setTeamLogo(
+        analysisData.teamCode
+          ? `https://resources.premierleague.com/premierleague/badges/t${analysisData.teamCode}.png`
+          : null
+      );
     } catch (err) {
       console.error(err);
       setError("Failed to analyze squad. Please try again.");
@@ -221,7 +211,7 @@ function App() {
                       marginTop: "24px",
                       letterSpacing: "0.1em",
                     }}>
-                      ⚠️ Squad data powered by FPL API · Photos via API-Football
+                      ⚠️ Squad data powered by FPL API · Updated every gameweek
                     </p>
                   </>
                 )}

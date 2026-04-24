@@ -8,9 +8,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { fplTeamId, teamName, photoMap } = req.body.playersData;
+    const { fplTeamId, teamName } = req.body.playersData;
 
-    // Fetch FPL data server-side — no CORS issues
     const fplResponse = await axios.get(
       "https://fantasy.premierleague.com/api/bootstrap-static/"
     );
@@ -21,30 +20,19 @@ export default async function handler(req, res) {
 
     const players = fplData.elements
       .filter(p => p.team === fplTeamId)
-      .map(p => {
-        const fullName = `${p.first_name} ${p.second_name}`;
-        const fullNameLower = fullName.toLowerCase();
-        const lastNameLower = p.second_name.toLowerCase();
-
-        const photo = photoMap[fullNameLower] ||
-          Object.entries(photoMap).find(([k]) =>
-            k.includes(lastNameLower) || lastNameLower.includes(k.split(" ").pop())
-          )?.[1] || null;
-
-        return {
-          id: p.id,
-          name: fullName,
-          position: POSITION_MAP[p.element_type] || "Unknown",
-          age: null,
-          appearances: p.starts || 0,
-          minutes: p.minutes || 0,
-          injured: p.status === "i" || p.status === "u",
-          status: p.status,
-          chanceOfPlaying: p.chance_of_playing_next_round,
-          news: p.news || "",
-          photo,
-        };
-      });
+      .map(p => ({
+        id: p.id,
+        name: `${p.first_name} ${p.second_name}`,
+        position: POSITION_MAP[p.element_type] || "Unknown",
+        age: null,
+        appearances: p.starts || 0,
+        minutes: p.minutes || 0,
+        injured: p.status === "i" || p.status === "u",
+        status: p.status,
+        chanceOfPlaying: p.chance_of_playing_next_round,
+        news: p.news || "",
+        photo: `https://resources.premierleague.com/premierleague/photos/players/110x140/p${p.code}.png`,
+      }));
 
     console.log("FPL players length:", players.length);
 
@@ -176,6 +164,7 @@ Be specific and concise.`;
       gameweekAdvice,
       squadFitnessScore,
       teamName: resolvedTeamName,
+      teamCode: fplTeam?.code || null,
     });
 
   } catch (error) {

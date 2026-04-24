@@ -33,8 +33,6 @@ export const analyzeWorkload = async (playersData) => {
   }
 
   const response = await axios.post("/api/analyze", { playersData });
-
   setCache(cacheKey, response.data);
-
   return response.data;
 };
