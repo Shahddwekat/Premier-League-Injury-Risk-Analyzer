@@ -1,26 +1,26 @@
 import { useState } from "react";
 
 const TEAMS = [
-  { id: 42, name: "Arsenal" },
-  { id: 66, name: "Aston Villa" },
-  { id: 35, name: "Bournemouth" },
-  { id: 55, name: "Brentford" },
-  { id: 51, name: "Brighton" },
-  { id: 44, name: "Burnley" },
-  { id: 49, name: "Chelsea" },
-  { id: 52, name: "Crystal Palace" },
-  { id: 45, name: "Everton" },
-  { id: 36, name: "Fulham" },
-  { id: 63, name: "Leeds United" },
-  { id: 40, name: "Liverpool" },
-  { id: 50, name: "Manchester City" },
-  { id: 33, name: "Manchester United" },
-  { id: 34, name: "Newcastle" },
-  { id: 65, name: "Nottingham Forest" },
-  { id: 746, name: "Sunderland" },
-  { id: 47, name: "Tottenham" },
-  { id: 48, name: "West Ham" },
-  { id: 39, name: "Wolves" },
+  { id: 1,  fplId: 1,  name: "Arsenal" },
+  { id: 2,  fplId: 2,  name: "Aston Villa" },
+  { id: 3,  fplId: 3,  name: "Bournemouth" },
+  { id: 4,  fplId: 4,  name: "Brentford" },
+  { id: 5,  fplId: 5,  name: "Brighton" },
+  { id: 6,  fplId: 6,  name: "Burnley" },
+  { id: 7,  fplId: 7,  name: "Chelsea" },
+  { id: 8,  fplId: 8,  name: "Crystal Palace" },
+  { id: 9,  fplId: 9,  name: "Everton" },
+  { id: 10, fplId: 10, name: "Fulham" },
+  { id: 11, fplId: 11, name: "Leeds United" },
+  { id: 12, fplId: 12, name: "Liverpool" },
+  { id: 13, fplId: 13, name: "Manchester City" },
+  { id: 14, fplId: 14, name: "Manchester United" },
+  { id: 15, fplId: 15, name: "Newcastle" },
+  { id: 16, fplId: 16, name: "Nottingham Forest" },
+  { id: 17, fplId: 17, name: "Sunderland" },
+  { id: 18, fplId: 18, name: "Tottenham" },
+  { id: 19, fplId: 19, name: "West Ham" },
+  { id: 20, fplId: 20, name: "Wolves" },
 ];
 
 const TeamSearch = ({ onTeamSelect, loading }) => {
@@ -28,7 +28,8 @@ const TeamSearch = ({ onTeamSelect, loading }) => {
 
   const handleAnalyze = () => {
     if (!selectedTeam) return;
-    onTeamSelect(Number(selectedTeam));
+    const team = TEAMS.find(t => t.id === Number(selectedTeam));
+    onTeamSelect(team);
   };
 
   return (

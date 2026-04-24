@@ -6,147 +6,60 @@ export default async function handler(req, res) {
   }
 
   try {
-    const playersData = req.body.playersData;
-    const { squad, fixtures, stats, injuries: injuryData } = playersData;
+    const { players, fixtures, teamName } = req.body.playersData;
 
     const recentFixtures = fixtures?.response || [];
 
-    const playerStats = stats?.response?.map(p => ({
-      id: p.player.id,
-      name: p.player.name,
-      age: p.player.age,
-      photo: p.player.photo,
-      appearances: p.statistics[0]?.games?.appearences || 0,
-      minutes: p.statistics[0]?.games?.minutes || 0,
-      position: p.statistics[0]?.games?.position || "Unknown",
-      injured: p.player.injured || false,
-    })) || [];
-
-    const squadPlayerIds = squad?.response?.[0]?.players?.map(p => p.id) || [];
-    const squadPlayers = squad?.response?.[0]?.players || [];
-
-    // Progressively relax filters until we have at least 11 players
-    const activePlayers = playerStats.filter(p => p.appearances > 0);
-    const filteredActive = activePlayers.filter(p => squadPlayerIds.includes(p.id));
-    const filteredAll = playerStats.filter(p => squadPlayerIds.includes(p.id));
-
-    let statsToUse;
-    if (filteredActive.length >= 11) {
-      statsToUse = filteredActive;
-    } else if (activePlayers.length >= 11) {
-      statsToUse = activePlayers;
-    } else if (filteredAll.length >= 11) {
-      statsToUse = filteredAll;
-    } else {
-      statsToUse = playerStats;
-    }
-
-    // Fill missing positions from squad endpoint
-    const statsWithPositions = statsToUse.map(p => {
-      if (p.position && p.position !== "Unknown") return p;
-      const squadMatch = squadPlayers.find(s => s.id === p.id);
-      return { ...p, position: squadMatch?.position || "Unknown" };
-    });
-
-    // If still not enough position variety, supplement with squad players missing from stats
-    const statsIds = new Set(statsWithPositions.map(p => p.id));
-    const missingSquadPlayers = squadPlayers
-      .filter(s => !statsIds.has(s.id))
-      .map(s => ({
-        id: s.id,
-        name: s.name,
-        age: s.age,
-        photo: s.photo,
-        appearances: 0,
-        minutes: 0,
-        position: s.position || "Unknown",
-        injured: false,
+    // Injuries = players marked injured or unavailable by FPL
+    const injuries = players
+      .filter(p => p.injured || p.status === "i" || p.status === "u" || p.status === "d")
+      .map(p => ({
+        player: p.name,
+        type: p.status === "i" ? "Injury" : p.status === "s" ? "Suspension" : "Doubt",
+        reason: p.news || "No details available",
       }));
 
-    // Merge: stats players + missing squad players to ensure full coverage
-    const fullPlayerPool = [...statsWithPositions, ...missingSquadPlayers];
-
-    console.log("fullPlayerPool length:", fullPlayerPool.length);
-    console.log("positions:", fullPlayerPool.map(p => p.position));
-
-    const injuriesRaw = injuryData?.response?.map(i => ({
-      player: i.player.name,
-      type: i.player.type,
-      reason: i.player.reason,
-    })) || [];
-
-    const seen = new Set();
-    const injuries = injuriesRaw.filter(i => {
-      if (seen.has(i.player)) return false;
-      seen.add(i.player);
-      return true;
-    });
-
-    console.log("injuries length:", injuries.length);
-
-    const injuredPlayerNames = injuries.map(i => i.player.toLowerCase().trim());
-
-    // Tag each player with injury status and default risk
-    const fullSquad = fullPlayerPool.map(p => {
-      const playerName = p.name.toLowerCase().trim();
-      const isInjured = injuredPlayerNames.some(injuredName => {
-        if (injuredName === playerName) return true;
-        const playerLastName = playerName.split(" ").pop();
-        const injuredLastName = injuredName.split(" ").pop();
-        return playerLastName.length >= 4 && playerLastName === injuredLastName;
-      });
-      const playerInjuries = injuries.filter(i => {
-        const iName = i.player.toLowerCase();
-        return iName === playerName ||
-          iName.includes(playerName) ||
-          playerName.includes(iName);
-      });
-      return {
-        ...p,
-        isInjured,
-        risk: isInjured ? "High" : "Low",
-        injuryHistory: playerInjuries,
-      };
-    });
-
-    const availableCount = fullSquad.filter(p => !p.isInjured).length;
-    const totalPlayers = fullSquad.length;
+    // Squad fitness score — based on FPL availability
+    const availableCount = players.filter(p => p.status === "a" || (!p.injured && p.chanceOfPlaying !== 0)).length;
+    const totalPlayers = players.length;
     const squadFitnessScore = totalPlayers > 0
       ? Math.round((availableCount / totalPlayers) * 100)
-      : injuries.length > 0 ? 70 : 85;
+      : 85;
 
+    console.log("players length:", players.length);
+    console.log("injuries length:", injuries.length);
     console.log("squadFitnessScore:", squadFitnessScore);
 
-    // Only send players with appearances to AI for risk analysis
-    const statsForAI = statsWithPositions.filter(p => p.appearances > 0);
+    // Only send players with appearances to AI
+    const statsForAI = players.filter(p => p.appearances > 0);
 
     const prompt = `You are a sports science analyst. Given the following Premier League squad data and recent fixture history, identify the top 3 players at highest injury risk.
 
-Consider: player age, position, minutes played, and fixture congestion (how many games in the last 30 days).
+Consider: position, minutes played, injury status, and fixture congestion.
 
-Only consider players with more than 0 appearances. Focus on players with the highest minutes played as they are most at risk from workload.
+If a player has status "i" (injured), "u" (unavailable), or "d" (doubt), mark them High Risk.
+Focus on players with the highest minutes played as they are most at risk from workload.
 
-If a player is currently injured, mark them High Risk regardless of minutes played.
+CRITICAL: Only mention players from the data provided. Never invent players.
 
-CRITICAL: Only mention players that appear in the Squad data provided above. Never suggest or reference players not in this dataset.
-
-Squad with season stats: ${JSON.stringify(statsForAI)}
-
+Squad data: ${JSON.stringify(statsForAI)}
 Recent fixtures: ${JSON.stringify(recentFixtures)}
-
 Current injuries: ${JSON.stringify(injuries)}
 
 For each player give:
 - name
-- risk (High/Medium/Low)
-- explanation (2 sentences mentioning specific data points like age, minutes, and appearances)
+- risk (High/Medium/Low)  
+- explanation (2 sentences with specific data points)
+- photo (copy exactly from data)
+- appearances
+- minutes
+- age (use null if not available)
+- position
 
-For each player, copy their exact photo URL, appearances, minutes, age and position from the data provided.
+Respond in JSON format only. Raw JSON array, no markdown:
+[{"name":"Player Name","risk":"High","explanation":"...","photo":"url_or_null","appearances":0,"minutes":0,"age":null,"position":"Position"}]
 
-Respond in JSON format only. No markdown, no backticks. Raw JSON array:
-[{"name": "Player Name", "risk": "High", "explanation": "...", "photo": "photo_url_from_data", "appearances": 0, "minutes": 0, "age": 0, "position": "Position"}]
-
-IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. Just the raw JSON array starting with [ and ending with ]`;
+IMPORTANT: Return ONLY the JSON array.`;
 
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -172,50 +85,53 @@ IMPORTANT: Return ONLY the JSON array. No text before or after. No explanation. 
       return res.status(500).json({ error: "Failed to parse AI response" });
     }
 
-    // Enrich top 3 risk players
+    // Enrich top 3 with full data
     const enriched = parsed.map(player => {
-      const match = statsWithPositions.find(p =>
+      const match = players.find(p =>
         p.name.toLowerCase() === player.name.toLowerCase() ||
         p.name.toLowerCase().includes(player.name.toLowerCase()) ||
         player.name.toLowerCase().includes(p.name.toLowerCase())
       );
-      const playerInjuries = injuries.filter(i =>
-        i.player.toLowerCase() === player.name.toLowerCase() ||
-        i.player.toLowerCase().includes(player.name.toLowerCase()) ||
-        player.name.toLowerCase().includes(i.player.toLowerCase())
-      );
       return {
         ...player,
         photo: match?.photo || null,
-        appearances: match?.appearances || player.appearances,
-        minutes: match?.minutes || player.minutes,
-        age: match?.age || player.age,
+        appearances: match?.appearances ?? player.appearances,
+        minutes: match?.minutes ?? player.minutes,
+        age: match?.age ?? player.age,
         position: match?.position || player.position,
         injured: match?.injured || false,
-        injuryHistory: playerInjuries,
+        injuryHistory: injuries.filter(i =>
+          i.player.toLowerCase().includes(player.name.toLowerCase()) ||
+          player.name.toLowerCase().includes(i.player.toLowerCase())
+        ),
       };
     });
 
-    // Merge AI risk onto fullSquad
-    const fullSquadWithRisk = fullSquad.map(p => {
+    // Build full squad with risk merged
+    const fullSquad = players.map(p => {
       const aiMatch = enriched.find(e =>
         e.name.toLowerCase() === p.name.toLowerCase() ||
         e.name.toLowerCase().includes(p.name.toLowerCase()) ||
         p.name.toLowerCase().includes(e.name.toLowerCase())
       );
-      return aiMatch ? { ...p, risk: aiMatch.risk } : p;
+      return {
+        ...p,
+        risk: aiMatch ? aiMatch.risk : p.injured ? "High" : "Low",
+        injuryHistory: injuries.filter(i =>
+          i.player.toLowerCase().includes(p.name.toLowerCase()) ||
+          p.name.toLowerCase().includes(i.player.toLowerCase())
+        ),
+      };
     });
 
-    const teamName = squad?.response?.[0]?.team?.name || "This team";
-
-    const advisorPrompt = `You are a Fantasy Premier League advisor. Based on this squad analysis, give a 2-3 sentence gameweek recommendation.
+    const advisorPrompt = `You are a Fantasy Premier League advisor. Give a 2-3 sentence gameweek recommendation.
 
 Team: ${teamName}
 Squad Fitness Score: ${squadFitnessScore}%
 High Risk Players: ${enriched.filter(p => p.risk === "High").map(p => p.name).join(", ")}
 Injury Count: ${injuries.length}
 
-Give practical fantasy advice about whether to pick players from this team, captaincy considerations, and transfer suggestions. Be specific and concise.`;
+Be specific and concise.`;
 
     const advisorResponse = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -235,7 +151,7 @@ Give practical fantasy advice about whether to pick players from this team, capt
 
     res.json({
       content: [{ text: JSON.stringify(enriched) }],
-      fullSquad: fullSquadWithRisk,
+      fullSquad,
       injuries,
       gameweekAdvice,
       squadFitnessScore,

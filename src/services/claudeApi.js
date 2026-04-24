@@ -23,13 +23,13 @@ function setCache(teamId, data) {
       data,
       timestamp: Date.now(),
     }));
-  } catch {
-    // localStorage full or unavailable — fail silently
-  }
+  } catch {}
 }
 
 export const analyzeWorkload = async (playersData) => {
-  const teamId = playersData?.squad?.response?.[0]?.team?.id;
+  const teamId = playersData?.players?.[0]?.id
+    ? `fpl_${playersData.teamName?.replace(/\s/g, "_")}`
+    : null;
 
   if (teamId) {
     const cached = getCached(teamId);
