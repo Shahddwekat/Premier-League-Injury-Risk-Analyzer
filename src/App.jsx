@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import TeamSearch from "./components/TeamSearch";
 import PlayerCard from "./components/PlayerCard";
+import InjuredPlayerCard from "./components/InjuredPlayerCard";
 import SkeletonCard from "./components/SkeletonCard";
 import InjuriesPage from "./pages/InjuryReport";
 import LineupSuggestion from "./components/LineupSuggestion";
@@ -315,33 +316,91 @@ function App() {
                 </div>
               )}
 
+              {/* Injury Risk Players */}
+              {players.length > 0 && (
+                <div className="mt-8">
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "16px",
+                  }}>
+                    <span style={{ fontSize: "18px" }}>⚠️</span>
+                    <h2 style={{
+                      fontFamily: "'Bebas Neue', sans-serif",
+                      fontSize: "20px",
+                      color: "white",
+                      letterSpacing: "0.1em",
+                      margin: 0,
+                    }}>
+                      Injury Risk Players
+                    </h2>
+                    <span style={{
+                      backgroundColor: "#FF28821A",
+                      border: "1px solid #FF288240",
+                      color: "#FF2882",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      padding: "2px 10px",
+                      borderRadius: "999px",
+                    }}>
+                      Available but at risk
+                    </span>
+                  </div>
+                  <div className="grid gap-4">
+                    {players.map((player, index) => (
+                      <PlayerCard key={index} player={player} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Currently Injured Players */}
               {teamInjuries.length > 0 && (
-                <button
-                  onClick={() => navigate("/injuries", { state: { injuries: teamInjuries, teamName, teamLogo } })}
-                  className="mt-6 hover:opacity-90 transition-opacity"
-                  style={{
-                    border: "1px solid #FF288240",
-                    backgroundColor: "#FF28821A",
-                    borderRadius: "16px",
-                    padding: "12px",
-                    width: "100%",
-                    color: "#FF2882",
-                    fontWeight: "700",
-                  }}
-                >
-                  ⚠️ View Full Injury Report ({teamInjuries.length} players)
-                </button>
+                <div className="mt-8">
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "16px",
+                  }}>
+                    <span style={{ fontSize: "18px" }}>🏥</span>
+                    <h2 style={{
+                      fontFamily: "'Bebas Neue', sans-serif",
+                      fontSize: "20px",
+                      color: "white",
+                      letterSpacing: "0.1em",
+                      margin: 0,
+                    }}>
+                      Currently Injured
+                    </h2>
+                    <span style={{
+                      backgroundColor: "#FF28821A",
+                      border: "1px solid #FF288240",
+                      color: "#FF2882",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      padding: "2px 10px",
+                      borderRadius: "999px",
+                    }}>
+                      {teamInjuries.length} players
+                    </span>
+                  </div>
+                  <div className="grid gap-3">
+                    {teamInjuries.map((injury, index) => (
+                      <InjuredPlayerCard
+                        key={index}
+                        injury={injury}
+                        players={fullSquad}
+                      />
+                    ))}
+                  </div>
+                </div>
               )}
 
               {loading && (
                 <div className="mt-8 grid gap-4">
                   {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
-                </div>
-              )}
-
-              {players.length > 0 && (
-                <div className="mt-8 grid gap-4">
-                  {players.map((player, index) => <PlayerCard key={index} player={player} />)}
                 </div>
               )}
             </div>
