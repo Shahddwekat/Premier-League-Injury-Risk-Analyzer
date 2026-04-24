@@ -6,30 +6,29 @@ import SkeletonCard from "./components/SkeletonCard";
 import InjuriesPage from "./pages/InjuryReport";
 import LineupSuggestion from "./components/LineupSuggestion";
 import { analyzeWorkload } from "./services/claudeApi";
-import { getSquadFromFPL, getPlayerPhotos, getTeamFixtures } from "./services/footballApi";
+import { getPlayerPhotos } from "./services/footballApi";
 
-// Map FPL team ID to API-Football team ID for photos
 const FPL_TO_APIFOOTBALL = {
-  1: 42,   // Arsenal
-  2: 66,   // Aston Villa
-  3: 35,   // Bournemouth
-  4: 55,   // Brentford
-  5: 51,   // Brighton
-  6: 44,   // Burnley
-  7: 49,   // Chelsea
-  8: 52,   // Crystal Palace
-  9: 45,   // Everton
-  10: 36,  // Fulham
-  11: 63,  // Leeds
-  12: 40,  // Liverpool
-  13: 50,  // Man City
-  14: 33,  // Man Utd
-  15: 34,  // Newcastle
-  16: 65,  // Nottingham Forest
-  17: 746, // Sunderland
-  18: 47,  // Tottenham
-  19: 48,  // West Ham
-  20: 39,  // Wolves
+  1: 42,
+  2: 66,
+  3: 35,
+  4: 55,
+  5: 51,
+  6: 44,
+  7: 49,
+  8: 52,
+  9: 45,
+  10: 36,
+  11: 63,
+  12: 40,
+  13: 50,
+  14: 33,
+  15: 34,
+  16: 65,
+  17: 746,
+  18: 47,
+  19: 48,
+  20: 39,
 };
 
 function App() {
@@ -59,30 +58,14 @@ function App() {
 
       const apiFootballId = FPL_TO_APIFOOTBALL[team.fplId];
 
-      // Fetch FPL data + API-Football fixtures and photos in parallel
-      const [fplData, fixtureData, photoMap] = await Promise.all([
-        getSquadFromFPL(team.fplId),
-        getTeamFixtures(apiFootballId),
-        getPlayerPhotos(apiFootballId),
-      ]);
-
-      setTeamName(fplData.team?.name || team.name);
-
-      // Match photos to FPL players by name
-      const playersWithPhotos = fplData.players.map(p => {
-        const fullNameLower = p.name.toLowerCase();
-        const lastNameLower = p.name.split(" ").pop().toLowerCase();
-        const photo = photoMap[fullNameLower] ||
-          Object.entries(photoMap).find(([k]) =>
-            k.includes(lastNameLower) || lastNameLower.includes(k.split(" ").pop())
-          )?.[1] || null;
-        return { ...p, photo };
-      });
+      // Only photos from frontend — FPL data fetched server-side
+      const photoMap = await getPlayerPhotos(apiFootballId);
 
       const analysisData = await analyzeWorkload({
-        players: playersWithPhotos,
-        fixtures: fixtureData,
-        teamName: fplData.team?.name || team.name,
+        fplTeamId: team.fplId,
+        apiFootballId,
+        teamName: team.name,
+        photoMap,
       });
 
       const content = analysisData.content?.[0]?.text || "[]";
@@ -94,6 +77,7 @@ function App() {
       setFullSquad(analysisData.fullSquad || []);
       setGameweekAdvice(analysisData.gameweekAdvice || "");
       setSquadFitnessScore(analysisData.squadFitnessScore || 0);
+      setTeamName(analysisData.teamName || team.name);
     } catch (err) {
       console.error(err);
       setError("Failed to analyze squad. Please try again.");

@@ -1,63 +1,85 @@
 import axios from "axios";
 
+const POSITION_MAP = { 1: "Goalkeeper", 2: "Defender", 3: "Midfielder", 4: "Attacker" };
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const { players, fixtures, teamName } = req.body.playersData;
+    const { fplTeamId, teamName, photoMap } = req.body.playersData;
 
-    const recentFixtures = fixtures?.response || [];
+    // Fetch FPL data server-side — no CORS issues
+    const fplResponse = await axios.get(
+      "https://fantasy.premierleague.com/api/bootstrap-static/"
+    );
+    const fplData = fplResponse.data;
 
-    // Injuries = players marked injured or unavailable by FPL
+    const fplTeam = fplData.teams.find(t => t.id === fplTeamId);
+    const resolvedTeamName = fplTeam?.name || teamName;
+
+    const players = fplData.elements
+      .filter(p => p.team === fplTeamId)
+      .map(p => {
+        const fullName = `${p.first_name} ${p.second_name}`;
+        const fullNameLower = fullName.toLowerCase();
+        const lastNameLower = p.second_name.toLowerCase();
+
+        const photo = photoMap[fullNameLower] ||
+          Object.entries(photoMap).find(([k]) =>
+            k.includes(lastNameLower) || lastNameLower.includes(k.split(" ").pop())
+          )?.[1] || null;
+
+        return {
+          id: p.id,
+          name: fullName,
+          position: POSITION_MAP[p.element_type] || "Unknown",
+          age: null,
+          appearances: p.starts || 0,
+          minutes: p.minutes || 0,
+          injured: p.status === "i" || p.status === "u",
+          status: p.status,
+          chanceOfPlaying: p.chance_of_playing_next_round,
+          news: p.news || "",
+          photo,
+        };
+      });
+
+    console.log("FPL players length:", players.length);
+
     const injuries = players
-      .filter(p => p.injured || p.status === "i" || p.status === "u" || p.status === "d")
+      .filter(p => p.status !== "a")
       .map(p => ({
         player: p.name,
         type: p.status === "i" ? "Injury" : p.status === "s" ? "Suspension" : "Doubt",
         reason: p.news || "No details available",
       }));
 
-    // Squad fitness score — based on FPL availability
-    const availableCount = players.filter(p => p.status === "a" || (!p.injured && p.chanceOfPlaying !== 0)).length;
-    const totalPlayers = players.length;
-    const squadFitnessScore = totalPlayers > 0
-      ? Math.round((availableCount / totalPlayers) * 100)
+    const availableCount = players.filter(p => p.status === "a").length;
+    const squadFitnessScore = players.length > 0
+      ? Math.round((availableCount / players.length) * 100)
       : 85;
 
-    console.log("players length:", players.length);
     console.log("injuries length:", injuries.length);
     console.log("squadFitnessScore:", squadFitnessScore);
 
-    // Only send players with appearances to AI
     const statsForAI = players.filter(p => p.appearances > 0);
 
-    const prompt = `You are a sports science analyst. Given the following Premier League squad data and recent fixture history, identify the top 3 players at highest injury risk.
+    const prompt = `You are a sports science analyst. Given the following Premier League squad data, identify the top 3 players at highest injury risk.
 
-Consider: position, minutes played, injury status, and fixture congestion.
+Consider: position, minutes played, injury status, and workload.
 
 If a player has status "i" (injured), "u" (unavailable), or "d" (doubt), mark them High Risk.
-Focus on players with the highest minutes played as they are most at risk from workload.
+Focus on players with the highest minutes as most at risk from workload.
 
 CRITICAL: Only mention players from the data provided. Never invent players.
 
 Squad data: ${JSON.stringify(statsForAI)}
-Recent fixtures: ${JSON.stringify(recentFixtures)}
 Current injuries: ${JSON.stringify(injuries)}
 
-For each player give:
-- name
-- risk (High/Medium/Low)  
-- explanation (2 sentences with specific data points)
-- photo (copy exactly from data)
-- appearances
-- minutes
-- age (use null if not available)
-- position
-
-Respond in JSON format only. Raw JSON array, no markdown:
-[{"name":"Player Name","risk":"High","explanation":"...","photo":"url_or_null","appearances":0,"minutes":0,"age":null,"position":"Position"}]
+Respond in JSON format only. Raw JSON array:
+[{"name":"Player Name","risk":"High","explanation":"2 sentences with specific data","photo":"url_or_null","appearances":0,"minutes":0,"age":null,"position":"Position"}]
 
 IMPORTANT: Return ONLY the JSON array.`;
 
@@ -85,7 +107,6 @@ IMPORTANT: Return ONLY the JSON array.`;
       return res.status(500).json({ error: "Failed to parse AI response" });
     }
 
-    // Enrich top 3 with full data
     const enriched = parsed.map(player => {
       const match = players.find(p =>
         p.name.toLowerCase() === player.name.toLowerCase() ||
@@ -97,7 +118,7 @@ IMPORTANT: Return ONLY the JSON array.`;
         photo: match?.photo || null,
         appearances: match?.appearances ?? player.appearances,
         minutes: match?.minutes ?? player.minutes,
-        age: match?.age ?? player.age,
+        age: null,
         position: match?.position || player.position,
         injured: match?.injured || false,
         injuryHistory: injuries.filter(i =>
@@ -107,7 +128,6 @@ IMPORTANT: Return ONLY the JSON array.`;
       };
     });
 
-    // Build full squad with risk merged
     const fullSquad = players.map(p => {
       const aiMatch = enriched.find(e =>
         e.name.toLowerCase() === p.name.toLowerCase() ||
@@ -126,7 +146,7 @@ IMPORTANT: Return ONLY the JSON array.`;
 
     const advisorPrompt = `You are a Fantasy Premier League advisor. Give a 2-3 sentence gameweek recommendation.
 
-Team: ${teamName}
+Team: ${resolvedTeamName}
 Squad Fitness Score: ${squadFitnessScore}%
 High Risk Players: ${enriched.filter(p => p.risk === "High").map(p => p.name).join(", ")}
 Injury Count: ${injuries.length}
@@ -155,6 +175,7 @@ Be specific and concise.`;
       injuries,
       gameweekAdvice,
       squadFitnessScore,
+      teamName: resolvedTeamName,
     });
 
   } catch (error) {

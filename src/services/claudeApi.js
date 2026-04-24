@@ -1,14 +1,14 @@
 import axios from "axios";
 
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_TTL = 24 * 60 * 60 * 1000;
 
-function getCached(teamId) {
+function getCached(key) {
   try {
-    const raw = localStorage.getItem(`team_${teamId}`);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const entry = JSON.parse(raw);
     if (Date.now() - entry.timestamp > CACHE_TTL) {
-      localStorage.removeItem(`team_${teamId}`);
+      localStorage.removeItem(key);
       return null;
     }
     return entry.data;
@@ -17,33 +17,24 @@ function getCached(teamId) {
   }
 }
 
-function setCache(teamId, data) {
+function setCache(key, data) {
   try {
-    localStorage.setItem(`team_${teamId}`, JSON.stringify({
-      data,
-      timestamp: Date.now(),
-    }));
+    localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
   } catch {}
 }
 
 export const analyzeWorkload = async (playersData) => {
-  const teamId = playersData?.players?.[0]?.id
-    ? `fpl_${playersData.teamName?.replace(/\s/g, "_")}`
-    : null;
+  const cacheKey = `fpl_team_${playersData.fplTeamId}`;
 
-  if (teamId) {
-    const cached = getCached(teamId);
-    if (cached) {
-      console.log(`Cache hit for team ${teamId}`);
-      return cached;
-    }
+  const cached = getCached(cacheKey);
+  if (cached) {
+    console.log(`Cache hit for team ${playersData.fplTeamId}`);
+    return cached;
   }
 
   const response = await axios.post("/api/analyze", { playersData });
 
-  if (teamId) {
-    setCache(teamId, response.data);
-  }
+  setCache(cacheKey, response.data);
 
   return response.data;
 };
