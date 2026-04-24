@@ -9,26 +9,10 @@ import { analyzeWorkload } from "./services/claudeApi";
 import { getPlayerPhotos } from "./services/footballApi";
 
 const FPL_TO_APIFOOTBALL = {
-  1: 42,
-  2: 66,
-  3: 35,
-  4: 55,
-  5: 51,
-  6: 44,
-  7: 49,
-  8: 52,
-  9: 45,
-  10: 36,
-  11: 63,
-  12: 40,
-  13: 50,
-  14: 33,
-  15: 34,
-  16: 65,
-  17: 746,
-  18: 47,
-  19: 48,
-  20: 39,
+  1: 42, 2: 66, 3: 35, 4: 55, 5: 51,
+  6: 44, 7: 49, 8: 52, 9: 45, 10: 36,
+  11: 63, 12: 40, 13: 50, 14: 33, 15: 34,
+  16: 65, 17: 746, 18: 47, 19: 48, 20: 39,
 };
 
 function App() {
@@ -40,6 +24,7 @@ function App() {
   const [squadFitnessScore, setSquadFitnessScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedFplId, setSelectedFplId] = useState(null);
   const [teamLogo, setTeamLogo] = useState(null);
 
   const navigate = useNavigate();
@@ -51,14 +36,13 @@ function App() {
       setPlayers([]);
       setFullSquad([]);
       setTeamInjuries([]);
-      setTeamLogo(null);
       setTeamName("");
       setGameweekAdvice("");
       setSquadFitnessScore(0);
+      setSelectedFplId(team.fplId);
+      setTeamLogo(`https://resources.premierleague.com/premierleague/badges/t${team.fplId}.png`);
 
       const apiFootballId = FPL_TO_APIFOOTBALL[team.fplId];
-
-      // Only photos from frontend — FPL data fetched server-side
       const photoMap = await getPlayerPhotos(apiFootballId);
 
       const analysisData = await analyzeWorkload({
@@ -260,6 +244,14 @@ function App() {
                   border: "1px solid #4A1060",
                   borderRadius: "16px",
                 }}>
+                  {teamLogo && (
+                    <img
+                      src={teamLogo}
+                      alt="Team logo"
+                      style={{ width: "56px", height: "56px", objectFit: "contain" }}
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
+                  )}
                   <div>
                     <p style={{ color: "#C0A0C0", fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", margin: 0 }}>
                       Currently Analyzing
