@@ -6,26 +6,25 @@ A full stack AI-powered web application that analyzes Premier League squad fitne
 [premier-league-injury-risk-analyzer.vercel.app](https://premier-league-injury-risk-analyzer.vercel.app)
 
 ## 🚀 Features
-- **AI Injury Risk Analysis** : identifies the top 3 players at highest injury risk based on age, position, minutes played, and injury history
-- **Squad Fitness Score** : calculates overall team fitness based on real injury data
+- **AI Injury Risk Analysis** : identifies the top 3 available players at highest injury risk based on minutes played, position, and workload
+- **Currently Injured Section** : separate view showing all injured, unavailable, and doubtful players with injury details
+- **Squad Fitness Score** : calculates overall team fitness based on real-time FPL availability data
 - **Suggested Starting XI** : builds a recommended 4-3-3 lineup prioritizing low risk players and benching high risk ones
-- **Gameweek Advisor** : AI-generated Fantasy Premier League recommendations
-- **Full Injury Report** : dedicated page showing all currently injured players with injury type and reason
-- **Player Stats** : real season data including appearances, minutes, position, and age
+- **Gameweek Advisor** : AI-generated Fantasy Premier League recommendations per team
 - **All 20 Premier League Teams** : complete 2025/26 season coverage
-- **Browser Caching** : 24-hour localStorage cache to minimize API usage
+- **Browser Caching** : 24-hour localStorage cache for instant repeat lookups
 - **Responsive Design** : works on both mobile and desktop
-- **Loading Skeletons** : professional loading states while data is fetched
+- **Loading Skeletons** : smooth loading states while data is fetched
 
 ## 🛠 Tech Stack
 - **Frontend:** React, Vite, Tailwind CSS, React Router
 - **Backend:** Vercel Serverless Functions
 - **AI Model:** Groq API (Llama 3.3 70B)
-- **Data:** API-Football (squad data, player stats, injury reports)
+- **Data:** Fantasy Premier League API (official, free, no key required)
 - **Deployment:** Vercel
 
 ## 🏗 Architecture
-The app uses a serverless backend to protect API keys and act as a proxy between the React frontend and external APIs. When a user selects a team, the app makes 4 parallel API calls to fetch squad data, fixtures, player statistics, and injury reports. This data is sent to the Groq AI model which returns a structured JSON injury risk assessment that drives the UI components directly. Results are cached in localStorage for 24 hours to conserve API quota.
+The app uses a serverless backend to call the FPL API (avoiding CORS restrictions) and the Groq AI model. When a user selects a team, the server fetches the full squad from the official FPL API, filters available vs injured players, and sends available players to Llama 3.3 70B for workload-based injury risk analysis. The AI returns a structured JSON response that drives the UI directly. Results are cached in localStorage for 24 hours for instant repeat lookups with zero API calls.
 
 ## ⚙️ Running Locally
 
@@ -41,6 +40,9 @@ npm install
 ```
 
 3. Create a `.env` file in the root:
+VITE_GROQ_KEY=your_groq_key
+GROQ_KEY=your_groq_key
+
 4. Start the development server
 ```bash
 npm run dev
@@ -52,14 +54,13 @@ node server/index.cjs
 ```
 
 ## 📊 Data Sources
-- **[API-Football](https://www.api-football.com/)** : squad rosters, player statistics, injury reports
-- **[Groq API](https://groq.com/)** : LLM inference using Llama 3.3 70B
+- **[Fantasy Premier League API](https://fantasy.premierleague.com/api/bootstrap-static/)** — official PL squad data, player stats, injury status, updated every gameweek
+- **[Groq API](https://groq.com/)** — LLM inference using Llama 3.3 70B
 
 ## ⚠️ Limitations
-- Squad data comes from API-Football and may lag on recent transfers
-- Free tier limited to 100 API requests per day
-- Player statistics are based on season totals, not recent match-by-match workload
-- Injury risk assessment is AI-generated based on available data and should not be used for medical decisions
+- Data is sourced from the official FPL API and reflects FPL availability status, not always real time injury news
+- Injury risk assessment is AI-generated based on workload data and should not be used for medical decisions
+- Player statistics are season totals, not match-by-match workload
 
 ## 👩‍💻 Author
 Shahd Dwekat

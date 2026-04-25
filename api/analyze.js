@@ -36,6 +36,7 @@ export default async function handler(req, res) {
 
     console.log("FPL players length:", players.length);
 
+    // Already injured/unavailable/suspended players
     const injuries = players
       .filter(p => p.status !== "a")
       .map(p => ({
@@ -44,6 +45,7 @@ export default async function handler(req, res) {
         reason: p.news || "No details available",
       }));
 
+    // Fitness score based on availability
     const availableCount = players.filter(p => p.status === "a").length;
     const squadFitnessScore = players.length > 0
       ? Math.round((availableCount / players.length) * 100)
@@ -52,22 +54,35 @@ export default async function handler(req, res) {
     console.log("injuries length:", injuries.length);
     console.log("squadFitnessScore:", squadFitnessScore);
 
-    const statsForAI = players.filter(p => p.appearances > 0);
+    // Only available players with appearances for AI risk analysis
+    const availableForAI = players.filter(p =>
+      (p.status === "a" || p.status === "d") && p.appearances > 0
+    );
 
-    const prompt = `You are a sports science analyst. Given the following Premier League squad data, identify the top 3 players at highest injury risk.
+    const prompt = `You are a sports science analyst. Given the following Premier League squad data, identify the top 3 AVAILABLE players most at risk of getting injured soon.
 
-Consider: position, minutes played, injury status, and workload.
+IMPORTANT RULES:
+- IGNORE players who are already injured (status "i"), unavailable (status "u"), or suspended (status "s")
+- ONLY pick from players with status "a" (available) or "d" (doubt)
+- Base your risk assessment on: high minutes played, age (older players tire more), position (defenders/midfielders run most), and heavy workload
+- A player with 2500+ minutes is at significantly higher risk than one with 1000 minutes
+- Focus on players who COULD get injured, not ones who already are
 
-If a player has status "i" (injured), "u" (unavailable), or "d" (doubt), mark them High Risk.
-Focus on players with the highest minutes as most at risk from workload.
+Available squad: ${JSON.stringify(availableForAI)}
+Already injured/unavailable: ${JSON.stringify(injuries)}
 
-CRITICAL: Only mention players from the data provided. Never invent players.
-
-Squad data: ${JSON.stringify(statsForAI)}
-Current injuries: ${JSON.stringify(injuries)}
+For each of the 3 players give:
+- name
+- risk (High/Medium/Low) — based on workload and physical risk factors only
+- explanation (2 sentences explaining WHY they are at risk of injury, mention minutes, age, position)
+- photo (copy exactly from data)
+- appearances
+- minutes
+- age (null if unavailable)
+- position
 
 Respond in JSON format only. Raw JSON array:
-[{"name":"Player Name","risk":"High","explanation":"2 sentences with specific data","photo":"url_or_null","appearances":0,"minutes":0,"age":null,"position":"Position"}]
+[{"name":"Player Name","risk":"High","explanation":"...","photo":"url_or_null","appearances":0,"minutes":0,"age":null,"position":"Position"}]
 
 IMPORTANT: Return ONLY the JSON array.`;
 
@@ -95,6 +110,7 @@ IMPORTANT: Return ONLY the JSON array.`;
       return res.status(500).json({ error: "Failed to parse AI response" });
     }
 
+    // Enrich top 3 risk players with full data
     const enriched = parsed.map(player => {
       const match = players.find(p =>
         p.name.toLowerCase() === player.name.toLowerCase() ||
@@ -108,14 +124,12 @@ IMPORTANT: Return ONLY the JSON array.`;
         minutes: match?.minutes ?? player.minutes,
         age: null,
         position: match?.position || player.position,
-        injured: match?.injured || false,
-        injuryHistory: injuries.filter(i =>
-          i.player.toLowerCase().includes(player.name.toLowerCase()) ||
-          player.name.toLowerCase().includes(i.player.toLowerCase())
-        ),
+        injured: false, // these are available players at RISK, not injured
+        injuryHistory: [],
       };
     });
 
+    // Full squad with risk merged — injured players marked High automatically
     const fullSquad = players.map(p => {
       const aiMatch = enriched.find(e =>
         e.name.toLowerCase() === p.name.toLowerCase() ||
@@ -124,7 +138,11 @@ IMPORTANT: Return ONLY the JSON array.`;
       );
       return {
         ...p,
-        risk: aiMatch ? aiMatch.risk : p.injured ? "High" : "Low",
+        risk: p.injured
+          ? "High"
+          : aiMatch
+          ? aiMatch.risk
+          : "Low",
         injuryHistory: injuries.filter(i =>
           i.player.toLowerCase().includes(p.name.toLowerCase()) ||
           p.name.toLowerCase().includes(i.player.toLowerCase())
@@ -136,10 +154,11 @@ IMPORTANT: Return ONLY the JSON array.`;
 
 Team: ${resolvedTeamName}
 Squad Fitness Score: ${squadFitnessScore}%
-High Risk Players: ${enriched.filter(p => p.risk === "High").map(p => p.name).join(", ")}
+Players at injury risk (available but high workload): ${enriched.filter(p => p.risk === "High").map(p => p.name).join(", ")}
+Currently injured/unavailable: ${injuries.map(i => i.player).join(", ")}
 Injury Count: ${injuries.length}
 
-Be specific and concise.`;
+Be specific and concise. Focus on who to pick and who to avoid.`;
 
     const advisorResponse = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
