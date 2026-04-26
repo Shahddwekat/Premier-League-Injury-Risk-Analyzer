@@ -10,8 +10,19 @@ export default async function handler(req, res) {
   try {
     const { fplTeamId, teamName } = req.body.playersData;
 
+    // Fetch FPL data server-side with browser-like headers to avoid 403
     const fplResponse = await axios.get(
-      "https://fantasy.premierleague.com/api/bootstrap-static/"
+      "https://fantasy.premierleague.com/api/bootstrap-static/",
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Referer": "https://fantasy.premierleague.com/",
+          "Origin": "https://fantasy.premierleague.com",
+        }
+      }
     );
     const fplData = fplResponse.data;
 
@@ -24,9 +35,13 @@ export default async function handler(req, res) {
         id: p.id,
         name: `${p.first_name} ${p.second_name}`,
         position: POSITION_MAP[p.element_type] || "Unknown",
-        age: null,
+        age: p.birth_date
+          ? Math.floor((Date.now() - new Date(p.birth_date)) / (365.25 * 24 * 60 * 60 * 1000))
+          : null,
         appearances: p.starts || 0,
         minutes: p.minutes || 0,
+        goals: p.goals_scored || 0,
+        assists: p.assists || 0,
         injured: p.status === "i" || p.status === "u",
         status: p.status,
         chanceOfPlaying: p.chance_of_playing_next_round,
@@ -36,7 +51,6 @@ export default async function handler(req, res) {
 
     console.log("FPL players length:", players.length);
 
-    // Already injured/unavailable/suspended players
     const injuries = players
       .filter(p => p.status !== "a")
       .map(p => ({
@@ -45,7 +59,6 @@ export default async function handler(req, res) {
         reason: p.news || "No details available",
       }));
 
-    // Fitness score based on availability
     const availableCount = players.filter(p => p.status === "a").length;
     const squadFitnessScore = players.length > 0
       ? Math.round((availableCount / players.length) * 100)
@@ -54,7 +67,6 @@ export default async function handler(req, res) {
     console.log("injuries length:", injuries.length);
     console.log("squadFitnessScore:", squadFitnessScore);
 
-    // Only available players with appearances for AI risk analysis
     const availableForAI = players.filter(p =>
       (p.status === "a" || p.status === "d") && p.appearances > 0
     );
@@ -78,7 +90,7 @@ For each of the 3 players give:
 - photo (copy exactly from data)
 - appearances
 - minutes
-- age (null if unavailable)
+- age
 - position
 
 Respond in JSON format only. Raw JSON array:
@@ -110,7 +122,6 @@ IMPORTANT: Return ONLY the JSON array.`;
       return res.status(500).json({ error: "Failed to parse AI response" });
     }
 
-    // Enrich top 3 risk players with full data
     const enriched = parsed.map(player => {
       const match = players.find(p =>
         p.name.toLowerCase() === player.name.toLowerCase() ||
@@ -122,14 +133,13 @@ IMPORTANT: Return ONLY the JSON array.`;
         photo: match?.photo || null,
         appearances: match?.appearances ?? player.appearances,
         minutes: match?.minutes ?? player.minutes,
-        age: null,
+        age: match?.age ?? player.age,
         position: match?.position || player.position,
-        injured: false, // these are available players at RISK, not injured
+        injured: false,
         injuryHistory: [],
       };
     });
 
-    // Full squad with risk merged — injured players marked High automatically
     const fullSquad = players.map(p => {
       const aiMatch = enriched.find(e =>
         e.name.toLowerCase() === p.name.toLowerCase() ||
