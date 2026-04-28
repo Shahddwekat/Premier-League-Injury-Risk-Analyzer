@@ -8,7 +8,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { fplTeamId, teamName } = req.body.playersData;
+    const fplTeamId = Number(req.body.playersData.fplTeamId);
+    const { teamName } = req.body.playersData;
 
     const fplResponse = await axios.get(
       "https://fantasy.premierleague.com/api/bootstrap-static/",
@@ -28,7 +29,6 @@ export default async function handler(req, res) {
     const fplTeam = fplData.teams.find(t => t.id === fplTeamId);
     const resolvedTeamName = fplTeam?.name || teamName;
 
-    // Get upcoming fixtures for fixture congestion analysis
     const fixturesResponse = await axios.get(
       "https://fantasy.premierleague.com/api/fixtures/",
       {
@@ -39,11 +39,9 @@ export default async function handler(req, res) {
       }
     );
 
-    // Get current gameweek
     const currentEvent = fplData.events.find(e => e.is_current) || fplData.events.find(e => e.is_next);
     const currentGW = currentEvent?.id || 1;
 
-    // Count upcoming fixtures in next 3 gameweeks for this team
     const upcomingFixtures = fixturesResponse.data.filter(f =>
       (f.team_h === fplTeamId || f.team_a === fplTeamId) &&
       f.event >= currentGW &&
@@ -57,16 +55,9 @@ export default async function handler(req, res) {
           ? Math.floor((Date.now() - new Date(p.birth_date)) / (365.25 * 24 * 60 * 60 * 1000))
           : null;
 
-        // Minutes per game ratio — high ratio = playing every minute
         const minutesPerGame = p.starts > 0 ? Math.round(p.minutes / p.starts) : 0;
-
-        // Age risk bracket
         const ageRisk = age >= 32 ? "High" : age >= 28 ? "Medium" : "Low";
-
-        // Workload risk — minutes above 2500 is high load
         const workloadRisk = p.minutes >= 2500 ? "High" : p.minutes >= 1500 ? "Medium" : "Low";
-
-        // Position risk — midfielders and defenders cover most ground
         const positionRisk = [2, 3].includes(p.element_type) ? "High" : p.element_type === 4 ? "Medium" : "Low";
 
         return {
@@ -94,6 +85,8 @@ export default async function handler(req, res) {
         };
       });
 
+    console.log("FPL team ID:", fplTeamId);
+    console.log("Resolved team name:", resolvedTeamName);
     console.log("FPL players length:", players.length);
     console.log("Upcoming fixtures in next 3 GWs:", upcomingFixtures);
 
