@@ -10,7 +10,6 @@ export default async function handler(req, res) {
   try {
     const { fplTeamId, teamName } = req.body.playersData;
 
-    // Fetch FPL data server-side with browser-like headers to avoid 403
     const fplResponse = await axios.get(
       "https://fantasy.premierleague.com/api/bootstrap-static/",
       {
@@ -29,27 +28,74 @@ export default async function handler(req, res) {
     const fplTeam = fplData.teams.find(t => t.id === fplTeamId);
     const resolvedTeamName = fplTeam?.name || teamName;
 
+    // Get upcoming fixtures for fixture congestion analysis
+    const fixturesResponse = await axios.get(
+      "https://fantasy.premierleague.com/api/fixtures/",
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Referer": "https://fantasy.premierleague.com/",
+        }
+      }
+    );
+
+    // Get current gameweek
+    const currentEvent = fplData.events.find(e => e.is_current) || fplData.events.find(e => e.is_next);
+    const currentGW = currentEvent?.id || 1;
+
+    // Count upcoming fixtures in next 3 gameweeks for this team
+    const upcomingFixtures = fixturesResponse.data.filter(f =>
+      (f.team_h === fplTeamId || f.team_a === fplTeamId) &&
+      f.event >= currentGW &&
+      f.event <= currentGW + 3
+    ).length;
+
     const players = fplData.elements
       .filter(p => p.team === fplTeamId)
-      .map(p => ({
-        id: p.id,
-        name: `${p.first_name} ${p.second_name}`,
-        position: POSITION_MAP[p.element_type] || "Unknown",
-        age: p.birth_date
+      .map(p => {
+        const age = p.birth_date
           ? Math.floor((Date.now() - new Date(p.birth_date)) / (365.25 * 24 * 60 * 60 * 1000))
-          : null,
-        appearances: p.starts || 0,
-        minutes: p.minutes || 0,
-        goals: p.goals_scored || 0,
-        assists: p.assists || 0,
-        injured: p.status === "i" || p.status === "u",
-        status: p.status,
-        chanceOfPlaying: p.chance_of_playing_next_round,
-        news: p.news || "",
-        photo: `https://resources.premierleague.com/premierleague/photos/players/110x140/p${p.code}.png`,
-      }));
+          : null;
+
+        // Minutes per game ratio — high ratio = playing every minute
+        const minutesPerGame = p.starts > 0 ? Math.round(p.minutes / p.starts) : 0;
+
+        // Age risk bracket
+        const ageRisk = age >= 32 ? "High" : age >= 28 ? "Medium" : "Low";
+
+        // Workload risk — minutes above 2500 is high load
+        const workloadRisk = p.minutes >= 2500 ? "High" : p.minutes >= 1500 ? "Medium" : "Low";
+
+        // Position risk — midfielders and defenders cover most ground
+        const positionRisk = [2, 3].includes(p.element_type) ? "High" : p.element_type === 4 ? "Medium" : "Low";
+
+        return {
+          id: p.id,
+          name: `${p.first_name} ${p.second_name}`,
+          position: POSITION_MAP[p.element_type] || "Unknown",
+          age,
+          ageRisk,
+          appearances: p.starts || 0,
+          minutes: p.minutes || 0,
+          minutesPerGame,
+          workloadRisk,
+          positionRisk,
+          goals: p.goals_scored || 0,
+          assists: p.assists || 0,
+          form: parseFloat(p.form) || 0,
+          expectedGoals: parseFloat(p.expected_goals) || 0,
+          totalPoints: p.total_points || 0,
+          selectedBy: p.selected_by_percent || "0",
+          chanceOfPlaying: p.chance_of_playing_next_round,
+          injured: p.status === "i" || p.status === "u",
+          status: p.status,
+          news: p.news || "",
+          photo: `https://resources.premierleague.com/premierleague/photos/players/110x140/p${p.code}.png`,
+        };
+      });
 
     console.log("FPL players length:", players.length);
+    console.log("Upcoming fixtures in next 3 GWs:", upcomingFixtures);
 
     const injuries = players
       .filter(p => p.status !== "a")
@@ -57,6 +103,7 @@ export default async function handler(req, res) {
         player: p.name,
         type: p.status === "i" ? "Injury" : p.status === "s" ? "Suspension" : "Doubt",
         reason: p.news || "No details available",
+        chanceOfPlaying: p.chanceOfPlaying,
       }));
 
     const availableCount = players.filter(p => p.status === "a").length;
@@ -71,32 +118,79 @@ export default async function handler(req, res) {
       (p.status === "a" || p.status === "d") && p.appearances > 0
     );
 
-    const prompt = `You are a sports science analyst. Given the following Premier League squad data, identify the top 3 AVAILABLE players most at risk of getting injured soon.
+    const prompt = `You are a sports science analyst specializing in Premier League injury prediction. Analyze the following squad data and identify the top 3 AVAILABLE players most at risk of getting injured soon.
 
-IMPORTANT RULES:
-- IGNORE players who are already injured (status "i"), unavailable (status "u"), or suspended (status "s")
-- ONLY pick from players with status "a" (available) or "d" (doubt)
-- Base your risk assessment on: high minutes played, age (older players tire more), position (defenders/midfielders run most), and heavy workload
-- A player with 2500+ minutes is at significantly higher risk than one with 1000 minutes
-- Focus on players who COULD get injured, not ones who already are
+## INJURY RISK FACTORS TO CONSIDER:
 
-Available squad: ${JSON.stringify(availableForAI)}
-Already injured/unavailable: ${JSON.stringify(injuries)}
+### 1. Physical Load (Most Important)
+- Total minutes played this season (2500+ = very high risk)
+- Minutes per game (90 min every game = no rotation = high risk)
+- High workload players have less recovery time between matches
 
-For each of the 3 players give:
-- name
-- risk (High/Medium/Low) — based on workload and physical risk factors only
-- explanation (2 sentences explaining WHY they are at risk of injury, mention minutes, age, position)
+### 2. Age Factor
+- Age 32+ = significantly higher injury risk due to recovery decline
+- Age 28-31 = moderate risk
+- Age 27 and under = lower age-related risk
+- Combine age WITH minutes — an old player with high minutes is critical risk
+
+### 3. Position Risk
+- Midfielders and Defenders = highest physical demand (most running, tackling)
+- Forwards = high sprint load but less contact
+- Goalkeepers = lowest injury risk from physical load
+
+### 4. Fixture Congestion
+- This team has ${upcomingFixtures} fixtures in the next 3 gameweeks
+- More upcoming fixtures = higher risk for players already at high load
+- Players with high minutes who face congested fixtures need rotation
+
+### 5. Form & Involvement
+- High form players (form > 6) are playing more = accumulating fatigue
+- Players with high goals + assists are heavily involved = more physical stress
+- High xG means lots of sprinting and attacking runs
+
+### 6. Combined Risk Score
+Calculate a combined risk considering ALL factors:
+- High minutes + Old age + Midfielder/Defender + Congested fixtures = CRITICAL risk
+- High minutes + Young age + Forward = Medium risk
+- Low minutes + Any age = Low risk
+
+## SQUAD DATA:
+${JSON.stringify(availableForAI.map(p => ({
+  name: p.name,
+  position: p.position,
+  age: p.age,
+  ageRisk: p.ageRisk,
+  minutes: p.minutes,
+  minutesPerGame: p.minutesPerGame,
+  workloadRisk: p.workloadRisk,
+  positionRisk: p.positionRisk,
+  appearances: p.appearances,
+  goals: p.goals,
+  assists: p.assists,
+  form: p.form,
+  expectedGoals: p.expectedGoals,
+  chanceOfPlaying: p.chanceOfPlaying,
+  photo: p.photo,
+})))}
+
+## ALREADY INJURED/UNAVAILABLE:
+${JSON.stringify(injuries)}
+
+## FIXTURE CONGESTION:
+${upcomingFixtures} matches in next 3 gameweeks for ${resolvedTeamName}
+
+Identify exactly 3 players. For each:
+- name (exact match from data)
+- risk: "High", "Medium", or "Low"
+- explanation: 2-3 sentences citing specific numbers (minutes, age, position, form) and explaining the combined risk
 - photo (copy exactly from data)
 - appearances
 - minutes
 - age
 - position
 
-Respond in JSON format only. Raw JSON array:
-[{"name":"Player Name","risk":"High","explanation":"...","photo":"url_or_null","appearances":0,"minutes":0,"age":null,"position":"Position"}]
-
-IMPORTANT: Return ONLY the JSON array.`;
+Respond ONLY with a raw JSON array, no markdown:
+[{"name":"","risk":"","explanation":"","photo":"","appearances":0,"minutes":0,"age":0,"position":""}]`;
 
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -135,6 +229,9 @@ IMPORTANT: Return ONLY the JSON array.`;
         minutes: match?.minutes ?? player.minutes,
         age: match?.age ?? player.age,
         position: match?.position || player.position,
+        goals: match?.goals ?? 0,
+        assists: match?.assists ?? 0,
+        form: match?.form ?? 0,
         injured: false,
         injuryHistory: [],
       };
@@ -164,11 +261,11 @@ IMPORTANT: Return ONLY the JSON array.`;
 
 Team: ${resolvedTeamName}
 Squad Fitness Score: ${squadFitnessScore}%
+Upcoming fixtures in next 3 GWs: ${upcomingFixtures}
 Players at injury risk (available but high workload): ${enriched.filter(p => p.risk === "High").map(p => p.name).join(", ")}
-Currently injured/unavailable: ${injuries.map(i => i.player).join(", ")}
-Injury Count: ${injuries.length}
+Currently injured/unavailable: ${injuries.map(i => `${i.player} (${i.type})`).join(", ")}
 
-Be specific and concise. Focus on who to pick and who to avoid.`;
+Be specific. Mention fixture congestion if relevant. Focus on who to captain, who to avoid, and transfer suggestions.`;
 
     const advisorResponse = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
