@@ -73,12 +73,6 @@ function App() {
               .desktop-selector { display: flex; }
               .mobile-selector  { display: none; }
               .pl-badge         { display: flex; }
-              .feature-grid {
-                display: grid;
-                grid-template-columns: 1fr;
-                gap: 16px;
-                margin-top: 16px;
-              }
               .header-spacer { height: 72px; }
 
               @media (max-width: 640px) {
@@ -87,14 +81,9 @@ function App() {
                 .pl-badge         { display: none; }
                 .header-spacer    { height: 118px; }
               }
-
-              @media (min-width: 641px) {
-                .feature-grid {
-                  grid-template-columns: repeat(3, 1fr);
-                }
-              }
             `}</style>
 
+            {/* Top stripe */}
             <div style={{
               height: "3px",
               background: "linear-gradient(90deg, #00FF85, #FF2882)",
@@ -105,6 +94,7 @@ function App() {
               zIndex: 100,
             }} />
 
+            {/* Header */}
             <header style={{
               position: "fixed",
               top: "3px",
@@ -177,46 +167,230 @@ function App() {
             <div className="header-spacer" />
 
             <div className="max-w-4xl mx-auto px-4 py-8">
-              <div style={{ paddingTop: "16px" }}>
-                {!players.length && !loading && (
-                  <>
-                    <div className="feature-grid">
+
+              {/* Empty state */}
+              {!players.length && !loading && (
+                <>
+                  {/* Hero */}
+                  <div style={{ textAlign: "center", padding: "40px 0 32px" }}>
+                    <div style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      backgroundColor: "#2D0040",
+                      border: "1px solid #6A2080",
+                      borderRadius: "999px",
+                      padding: "6px 16px",
+                      marginBottom: "24px",
+                    }}>
+                      <span style={{
+                        fontSize: "10px",
+                        color: "#00FF85",
+                        fontWeight: "800",
+                        letterSpacing: "0.2em",
+                        textTransform: "uppercase",
+                      }}>
+                        ⚡ AI-Powered · 2025/26 Season
+                      </span>
+                    </div>
+
+                    <h1 style={{
+                      fontFamily: "'Bebas Neue', sans-serif",
+                      fontSize: "clamp(36px, 6vw, 72px)",
+                      color: "white",
+                      letterSpacing: "0.05em",
+                      margin: "0 0 16px 0",
+                      lineHeight: 1,
+                    }}>
+                      Premier League<br />
+                      <span style={{ color: "#00FF85" }}>Injury Risk</span> Analyzer
+                    </h1>
+
+                    <p style={{
+                      color: "#8060A0",
+                      fontSize: "16px",
+                      maxWidth: "480px",
+                      margin: "0 auto 40px",
+                      lineHeight: "1.6",
+                    }}>
+                      Select any PL team to get AI-powered injury risk analysis, squad fitness scores, and FPL gameweek advice.
+                    </p>
+
+                    {/* Team logos */}
+                    <div style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      justifyContent: "center",
+                      gap: "12px",
+                      maxWidth: "600px",
+                      margin: "0 auto 48px",
+                    }}>
                       {[
-                        { icon: "🏥", title: "Injury Risk", desc: "AI analysis of player workload and injury probability" },
-                        { icon: "📊", title: "Squad Fitness", desc: "Real-time fitness score based on squad availability" },
-                        { icon: "🎯", title: "FPL Advisor", desc: "Gameweek recommendations for fantasy managers" },
-                      ].map((card, i) => (
-                        <div key={i} style={{
+                        { name: "Arsenal", code: 3 },
+                        { name: "Aston Villa", code: 7 },
+                        { name: "Bournemouth", code: 91 },
+                        { name: "Brentford", code: 94 },
+                        { name: "Brighton", code: 36 },
+                        { name: "Burnley", code: 90 },
+                        { name: "Chelsea", code: 8 },
+                        { name: "Crystal Palace", code: 31 },
+                        { name: "Everton", code: 11 },
+                        { name: "Fulham", code: 54 },
+                        { name: "Leeds", code: 2 },
+                        { name: "Liverpool", code: 14 },
+                        { name: "Man City", code: 43 },
+                        { name: "Man Utd", code: 1 },
+                        { name: "Newcastle", code: 4 },
+                        { name: "Nott'm Forest", code: 17 },
+                        { name: "Sunderland", code: 56 },
+                        { name: "Tottenham", code: 6 },
+                        { name: "West Ham", code: 21 },
+                        { name: "Wolves", code: 39 },
+                      ].map((team) => (
+                        <div
+                          key={team.code}
+                          title={team.name}
+                          style={{
+                            width: "52px",
+                            height: "52px",
+                            borderRadius: "50%",
+                            backgroundColor: "#2D0040",
+                            border: "1px solid #3A1050",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "8px",
+                            transition: "border-color 0.2s, transform 0.2s",
+                            cursor: "default",
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.borderColor = "#00FF85";
+                            e.currentTarget.style.transform = "scale(1.15)";
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.borderColor = "#3A1050";
+                            e.currentTarget.style.transform = "scale(1)";
+                          }}
+                        >
+                          <img
+                            src={`https://resources.premierleague.com/premierleague/badges/t${team.code}.png`}
+                            alt={team.name}
+                            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                            onError={(e) => { e.target.style.display = "none"; }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Feature cards */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {[
+                      {
+                        icon: "🏥",
+                        title: "Injury Risk",
+                        desc: "AI analysis of player workload and injury probability based on minutes, age and position",
+                        color: "#FF2882",
+                        number: "01",
+                      },
+                      {
+                        icon: "📊",
+                        title: "Squad Fitness",
+                        desc: "Real time fitness score calculated from squad availability and injury data",
+                        color: "#00FF85",
+                        number: "02",
+                      },
+                      {
+                        icon: "🎯",
+                        title: "FPL Advisor",
+                        desc: "Gameweek recommendations for fantasy managers, who to captain, transfer and avoid",
+                        color: "#A78BFA",
+                        number: "03",
+                      },
+                    ].map((card, i) => (
+                      <div
+                        key={i}
+                        style={{
                           background: "linear-gradient(135deg, #2D0040, #1A0028)",
-                          border: "1px solid #3A1050",
+                          border: `1px solid ${card.color}25`,
+                          borderLeft: `3px solid ${card.color}`,
                           borderRadius: "16px",
-                          padding: "24px 20px",
-                          textAlign: "center",
+                          padding: "20px 24px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "20px",
+                          transition: "transform 0.2s, box-shadow 0.2s",
+                          cursor: "default",
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.transform = "translateX(4px)";
+                          e.currentTarget.style.boxShadow = `0 0 24px ${card.color}20`;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.transform = "translateX(0)";
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
+                      >
+                        {/* Number */}
+                        <div style={{
+                          fontFamily: "'Bebas Neue', sans-serif",
+                          fontSize: "40px",
+                          color: card.color,
+                          opacity: 0.3,
+                          lineHeight: 1,
+                          flexShrink: 0,
+                          width: "48px",
                         }}>
-                          <div style={{ fontSize: "28px", marginBottom: "12px" }}>{card.icon}</div>
+                          {card.number}
+                        </div>
+
+                        {/* Icon */}
+                        <div style={{
+                          fontSize: "24px",
+                          flexShrink: 0,
+                          width: "44px",
+                          height: "44px",
+                          backgroundColor: `${card.color}15`,
+                          border: `1px solid ${card.color}30`,
+                          borderRadius: "12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}>
+                          {card.icon}
+                        </div>
+
+                        {/* Text */}
+                        <div style={{ flex: 1 }}>
                           <h3 style={{
                             fontFamily: "'Bebas Neue', sans-serif",
                             fontSize: "18px",
                             color: "white",
                             letterSpacing: "0.1em",
-                            marginBottom: "8px",
+                            margin: "0 0 4px 0",
                           }}>{card.title}</h3>
-                          <p style={{ color: "#8060A0", fontSize: "12px", lineHeight: "1.5" }}>{card.desc}</p>
+                          <p style={{
+                            color: "#8060A0",
+                            fontSize: "12px",
+                            lineHeight: "1.5",
+                            margin: 0,
+                          }}>{card.desc}</p>
                         </div>
-                      ))}
-                    </div>
-                    <p style={{
-                      textAlign: "center",
-                      color: "#6A4080",
-                      fontSize: "11px",
-                      marginTop: "24px",
-                      letterSpacing: "0.1em",
-                    }}>
-                      ⚠️ Squad data powered by FPL API · Updated every gameweek
-                    </p>
-                  </>
-                )}
-              </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p style={{
+                    textAlign: "center",
+                    color: "#6A4080",
+                    fontSize: "11px",
+                    marginTop: "24px",
+                    letterSpacing: "0.1em",
+                  }}>
+                    ⚠️ Squad data powered by FPL API · Updated every gameweek
+                  </p>
+                </>
+              )}
 
               {error && (
                 <div className="mt-6 p-4 bg-red-900/40 border border-red-500 rounded-lg text-red-300">
@@ -244,7 +418,13 @@ function App() {
                     />
                   )}
                   <div>
-                    <p style={{ color: "#C0A0C0", fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", margin: 0 }}>
+                    <p style={{
+                      color: "#C0A0C0",
+                      fontSize: "10px",
+                      letterSpacing: "0.2em",
+                      textTransform: "uppercase",
+                      margin: 0,
+                    }}>
                       Currently Analyzing
                     </p>
                     <h2 style={{
@@ -274,7 +454,13 @@ function App() {
                   padding: "20px 24px",
                 }}>
                   <div className="flex justify-between items-center mb-3">
-                    <span style={{ color: "#00FF85", fontSize: "11px", fontWeight: "800", letterSpacing: "0.2em", textTransform: "uppercase" }}>
+                    <span style={{
+                      color: "#00FF85",
+                      fontSize: "11px",
+                      fontWeight: "800",
+                      letterSpacing: "0.2em",
+                      textTransform: "uppercase",
+                    }}>
                       Squad Fitness
                     </span>
                     <span style={{ color: "white", fontWeight: "800", fontSize: "24px" }}>
