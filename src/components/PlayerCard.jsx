@@ -6,9 +6,34 @@ const riskConfig = {
   Low: { bg: "#002A1A", border: "#00FF85", badge: "#00FF85", badgeText: "#37003C" },
 };
 
+const AnonymousAvatar = ({ border }) => (
+  <div
+    className="w-20 h-20 rounded-full shrink-0"
+    style={{
+      border: `2px solid ${border}`,
+      backgroundColor: "#3A1050",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      flexShrink: 0,
+    }}
+  >
+    <svg viewBox="0 0 80 80" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+      {/* Background */}
+      <rect width="80" height="80" fill="#3A1050" rx="40" />
+      {/* Head */}
+      <circle cx="40" cy="30" r="14" fill="#6A3080" />
+      {/* Body */}
+      <ellipse cx="40" cy="68" rx="22" ry="16" fill="#6A3080" />
+    </svg>
+  </div>
+);
+
 const PlayerCard = ({ player }) => {
   const config = riskConfig[player.risk] || riskConfig.Low;
   const [showHistory, setShowHistory] = useState(false);
+  const [photoError, setPhotoError] = useState(false);
 
   return (
     <div style={{
@@ -18,15 +43,16 @@ const PlayerCard = ({ player }) => {
       overflow: "hidden",
     }}>
       <div className="flex items-start gap-4 p-5">
-        {player.photo ? (
+        {player.photo && !photoError ? (
           <img
             src={player.photo}
             alt={player.name}
             className="w-20 h-20 rounded-full object-cover shrink-0"
             style={{ border: `2px solid ${config.border}` }}
+            onError={() => setPhotoError(true)}
           />
         ) : (
-          <div className="w-20 h-20 rounded-full shrink-0" style={{ backgroundColor: "#4A003C" }} />
+          <AnonymousAvatar border={config.border} />
         )}
         <div className="flex-1">
           <div className="flex items-center justify-between">
