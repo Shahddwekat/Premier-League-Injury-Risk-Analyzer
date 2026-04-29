@@ -76,7 +76,9 @@ export default async function handler(req, res) {
           form: parseFloat(p.form) || 0,
           expectedGoals: parseFloat(p.expected_goals) || 0,
           totalPoints: p.total_points || 0,
+          pointsPerGame: parseFloat(p.points_per_game) || 0,
           selectedBy: p.selected_by_percent || "0",
+          epNext: parseFloat(p.ep_next) || 0,
           chanceOfPlaying: p.chance_of_playing_next_round,
           injured: p.status === "i" || p.status === "u",
           status: p.status,
@@ -250,15 +252,62 @@ Respond ONLY with a raw JSON array, no markdown:
       };
     });
 
-    const advisorPrompt = `You are a Fantasy Premier League advisor. Give a 2-3 sentence gameweek recommendation.
+    // Top performers by form
+    const topPerformers = players
+      .filter(p => p.status === "a" && p.appearances > 0)
+      .sort((a, b) => b.form - a.form)
+      .slice(0, 5)
+      .map(p => ({
+        name: p.name,
+        position: p.position,
+        form: p.form,
+        totalPoints: p.totalPoints,
+        pointsPerGame: p.pointsPerGame,
+        goals: p.goals,
+        assists: p.assists,
+        minutes: p.minutes,
+        selectedBy: p.selectedBy,
+        epNext: p.epNext,
+      }));
+
+    // Low form players
+    const lowFormPlayers = players
+      .filter(p => p.status === "a" && p.appearances > 0)
+      .sort((a, b) => a.form - b.form)
+      .slice(0, 3)
+      .map(p => ({
+        name: p.name,
+        position: p.position,
+        form: p.form,
+        totalPoints: p.totalPoints,
+        minutes: p.minutes,
+      }));
+
+    const advisorPrompt = `You are a Fantasy Premier League advisor. Give a specific 3-4 sentence gameweek recommendation based ONLY on the data provided below.
+
+RULES:
+- Only mention players from the data provided
+- Base captaincy on form (last 4 GW average) and ep_next (predicted points next GW)
+- Flag players with high form + high minutes as strong picks
+- Flag players with low form as ones to avoid or transfer out
+- Mention ownership % for differential picks (under 15% ownership = differential)
+- Be specific with numbers — mention actual form scores, points, goals, assists
+- Do NOT give generic FPL advice — every sentence must reference specific players from this team
 
 Team: ${resolvedTeamName}
-Squad Fitness Score: ${squadFitnessScore}%
+Squad Fitness: ${squadFitnessScore}%
 Upcoming fixtures in next 3 GWs: ${upcomingFixtures}
-Players at injury risk (available but high workload): ${enriched.filter(p => p.risk === "High").map(p => p.name).join(", ")}
+
+Top performing available players (sorted by recent form):
+${JSON.stringify(topPerformers)}
+
+Low form available players (consider transferring out):
+${JSON.stringify(lowFormPlayers)}
+
+At injury risk (available but high workload): ${enriched.filter(p => p.risk === "High").map(p => p.name).join(", ")}
 Currently injured/unavailable: ${injuries.map(i => `${i.player} (${i.type})`).join(", ")}
 
-Be specific. Mention fixture congestion if relevant. Focus on who to captain, who to avoid, and transfer suggestions.`;
+Give specific advice: who to captain, who are differentials, who to avoid, and whether the team is worth investing in.`;
 
     const advisorResponse = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",

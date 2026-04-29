@@ -6,26 +6,51 @@ const riskColor = {
   High: "#FF2882",
 };
 
+const AnonymousAvatar = ({ size = 44, border }) => (
+  <div style={{
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    border: `2px solid ${border}`,
+    backgroundColor: "#3A1050",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    flexShrink: 0,
+  }}>
+    <svg viewBox="0 0 80 80" width={size} height={size} xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="80" fill="#3A1050" rx="40" />
+      <circle cx="40" cy="30" r="14" fill="#6A3080" />
+      <ellipse cx="40" cy="68" rx="22" ry="16" fill="#6A3080" />
+    </svg>
+  </div>
+);
+
 const PlayerBubble = ({ player }) => {
+  const [photoError, setPhotoError] = useState(false);
   const color = riskColor[player.risk] || "#00FF85";
   const lastName = player.name.split(" ").pop();
+
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", width: "64px" }}>
-      <div style={{
-        width: "44px",
-        height: "44px",
-        borderRadius: "50%",
-        overflow: "hidden",
-        border: `2px solid ${color}`,
-        backgroundColor: "#2D0040",
-        flexShrink: 0,
-      }}>
-        {player.photo ? (
-          <img src={player.photo} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        ) : (
-          <div style={{ width: "100%", height: "100%", backgroundColor: "#4A003C" }} />
-        )}
-      </div>
+      {player.photo && !photoError ? (
+        <img
+          src={player.photo}
+          alt={player.name}
+          style={{
+            width: "44px",
+            height: "44px",
+            borderRadius: "50%",
+            objectFit: "cover",
+            border: `2px solid ${color}`,
+            flexShrink: 0,
+          }}
+          onError={() => setPhotoError(true)}
+        />
+      ) : (
+        <AnonymousAvatar size={44} border={color} />
+      )}
       <span style={{
         color: "white",
         fontSize: "10px",
@@ -54,33 +79,26 @@ const PlayerBubble = ({ player }) => {
 const LineupSuggestion = ({ players, teamName }) => {
   const [open, setOpen] = useState(false);
 
-  // Sort: Low risk first, then Medium, then High
   const riskOrder = { Low: 0, Medium: 1, High: 2 };
   const sorted = [...players].sort((a, b) => (riskOrder[a.risk] ?? 1) - (riskOrder[b.risk] ?? 1));
 
-  // Pick best 11 by position
   const gks  = sorted.filter(p => p.position === "Goalkeeper").slice(0, 1);
   const defs = sorted.filter(p => p.position === "Defender").slice(0, 4);
   const mids = sorted.filter(p => p.position === "Midfielder").slice(0, 3);
   const fwds = sorted.filter(p => p.position === "Attacker").slice(0, 3);
 
   const picked = [...gks, ...defs, ...mids, ...fwds];
-
-  // Fill to 11 if positions are short
   const unpicked = sorted.filter(p => !picked.includes(p));
   while (picked.length < 11 && unpicked.length > 0) {
     picked.push(unpicked.shift());
   }
 
-  const finalGK   = picked.slice(0, 1);
-  const finalDEF  = picked.slice(1, 5);
-  const finalMID  = picked.slice(5, 8);
-  const finalFWD  = picked.slice(8, 11);
-
-  // Bench: next 4 lowest risk not in starting 11
-  const bench = sorted.filter(p => !picked.includes(p)).slice(0, 4);
-
-  const rows = [finalFWD, finalMID, finalDEF, finalGK];
+  const finalGK  = picked.slice(0, 1);
+  const finalDEF = picked.slice(1, 5);
+  const finalMID = picked.slice(5, 8);
+  const finalFWD = picked.slice(8, 11);
+  const bench    = sorted.filter(p => !picked.includes(p)).slice(0, 4);
+  const rows     = [finalFWD, finalMID, finalDEF, finalGK];
 
   return (
     <div style={{ marginTop: "24px" }}>
@@ -137,7 +155,6 @@ const LineupSuggestion = ({ players, teamName }) => {
             justifyContent: "space-around",
             gap: "8px",
           }}>
-            {/* Pitch markings */}
             <div style={{
               position: "absolute", top: "50%", left: "8%", right: "8%",
               height: "1px", backgroundColor: "rgba(255,255,255,0.12)",
@@ -158,7 +175,6 @@ const LineupSuggestion = ({ players, teamName }) => {
               height: "14%", border: "1px solid rgba(255,255,255,0.12)",
             }} />
 
-            {/* Player rows: FWD → MID → DEF → GK */}
             {rows.map((row, rowIdx) => (
               <div key={rowIdx} style={{
                 display: "flex",
