@@ -2,6 +2,67 @@ import axios from "axios";
 
 const POSITION_MAP = { 1: "Goalkeeper", 2: "Defender", 3: "Midfielder", 4: "Attacker" };
 
+async function fetchFPLBootstrap() {
+  const attempts = [
+    {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "application/json, text/plain, */*",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Referer": "https://fantasy.premierleague.com/",
+      "Origin": "https://fantasy.premierleague.com",
+      "Cache-Control": "no-cache",
+    },
+    {
+      "User-Agent": "curl/7.68.0",
+      "Accept": "*/*",
+    },
+    {
+      "User-Agent": "python-requests/2.28.0",
+      "Accept": "*/*",
+    },
+  ];
+
+  for (const headers of attempts) {
+    try {
+      const response = await axios.get(
+        "https://fantasy.premierleague.com/api/bootstrap-static/",
+        { headers, timeout: 8000 }
+      );
+      if (response.data?.elements) return response.data;
+    } catch (e) {
+      continue;
+    }
+  }
+  throw new Error("FPL API blocked all attempts");
+}
+
+async function fetchFPLFixtures() {
+  const attempts = [
+    {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Referer": "https://fantasy.premierleague.com/",
+    },
+    {
+      "User-Agent": "curl/7.68.0",
+      "Accept": "*/*",
+    },
+  ];
+
+  for (const headers of attempts) {
+    try {
+      const response = await axios.get(
+        "https://fantasy.premierleague.com/api/fixtures/",
+        { headers, timeout: 8000 }
+      );
+      if (Array.isArray(response.data)) return response.data;
+    } catch (e) {
+      continue;
+    }
+  }
+  return []; // fail silently for fixtures
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -9,9 +70,13 @@ export default async function handler(req, res) {
 
   try {
     const fplTeamId = Number(req.body.playersData.fplTeamId);
-    const { teamName, bootstrapData, fixturesData } = req.body.playersData;
+    const { teamName } = req.body.playersData;
 
-    const fplData = bootstrapData;
+    const [fplData, fixturesData] = await Promise.all([
+      fetchFPLBootstrap(),
+      fetchFPLFixtures(),
+    ]);
+
     const fplTeam = fplData.teams.find(t => t.id === fplTeamId);
     const resolvedTeamName = fplTeam?.name || teamName;
 
@@ -121,7 +186,6 @@ export default async function handler(req, res) {
 - High xG means lots of sprinting and attacking runs
 
 ### 6. Combined Risk Score
-Calculate a combined risk considering ALL factors:
 - High minutes + Old age + Midfielder/Defender + Congested fixtures = CRITICAL risk
 - High minutes + Young age + Forward = Medium risk
 - Low minutes + Any age = Low risk
@@ -154,7 +218,7 @@ ${upcomingFixtures} matches in next 3 gameweeks for ${resolvedTeamName}
 Identify exactly 3 players. For each:
 - name (exact match from data)
 - risk: "High", "Medium", or "Low"
-- explanation: 2-3 sentences citing specific numbers (minutes, age, position, form) and explaining the combined risk
+- explanation: 2-3 sentences citing specific numbers (minutes, age, position, form)
 - photo (copy exactly from data)
 - appearances
 - minutes
