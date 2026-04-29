@@ -320,6 +320,9 @@ Respond ONLY with a raw JSON array, no markdown:
         minutes: p.minutes,
       }));
 
+    // Wait 2 seconds between Groq calls to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     const advisorPrompt = `You are a Fantasy Premier League advisor. Give a specific 3-4 sentence gameweek recommendation based ONLY on the data provided below.
 
 RULES:
