@@ -60,7 +60,7 @@ async function fetchFPLFixtures() {
       continue;
     }
   }
-  return []; // fail silently for fixtures
+  return [];
 }
 
 export default async function handler(req, res) {
@@ -104,6 +104,7 @@ export default async function handler(req, res) {
         return {
           id: p.id,
           name: `${p.first_name} ${p.second_name}`,
+          webName: p.web_name || `${p.first_name} ${p.second_name}`,
           position: POSITION_MAP[p.element_type] || "Unknown",
           age,
           ageRisk,
@@ -265,6 +266,7 @@ Respond ONLY with a raw JSON array, no markdown:
         minutes: match?.minutes ?? player.minutes,
         age: match?.age ?? player.age,
         position: match?.position || player.position,
+        webName: match?.webName || player.name,
         goals: match?.goals ?? 0,
         assists: match?.assists ?? 0,
         form: match?.form ?? 0,

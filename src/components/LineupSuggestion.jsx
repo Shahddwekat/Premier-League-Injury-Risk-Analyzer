@@ -30,7 +30,7 @@ const AnonymousAvatar = ({ size = 44, border }) => (
 const PlayerBubble = ({ player }) => {
   const [photoError, setPhotoError] = useState(false);
   const color = riskColor[player.risk] || "#00FF85";
-  const lastName = player.name.split(" ").pop();
+  const displayName = player.webName || player.name.split(" ").pop();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", width: "64px" }}>
@@ -63,7 +63,7 @@ const PlayerBubble = ({ player }) => {
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
       }}>
-        {lastName}
+        {displayName}
       </span>
       <div style={{
         width: "8px",
@@ -80,25 +80,51 @@ const LineupSuggestion = ({ players, teamName }) => {
   const [open, setOpen] = useState(false);
 
   const riskOrder = { Low: 0, Medium: 1, High: 2 };
-  const sorted = [...players].sort((a, b) => (riskOrder[a.risk] ?? 1) - (riskOrder[b.risk] ?? 1));
 
+  // Only use players with appearances for lineup
+  const activePlayers = players.filter(p => p.appearances > 0 && !p.injured);
+  const sorted = [...activePlayers].sort((a, b) => (riskOrder[a.risk] ?? 1) - (riskOrder[b.risk] ?? 1));
+
+  // Pick best by position — low risk first
   const gks  = sorted.filter(p => p.position === "Goalkeeper").slice(0, 1);
   const defs = sorted.filter(p => p.position === "Defender").slice(0, 4);
   const mids = sorted.filter(p => p.position === "Midfielder").slice(0, 3);
   const fwds = sorted.filter(p => p.position === "Attacker").slice(0, 3);
 
   const picked = [...gks, ...defs, ...mids, ...fwds];
-  const unpicked = sorted.filter(p => !picked.includes(p));
-  while (picked.length < 11 && unpicked.length > 0) {
-    picked.push(unpicked.shift());
+
+  // Only fill gaps with players of the correct position shortage
+  // Don't mix positions randomly
+  if (picked.length < 11) {
+    const unpicked = sorted.filter(p => !picked.includes(p));
+    // Fill missing defenders first, then midfielders, then forwards
+    const neededDefs = 4 - defs.length;
+    const neededMids = 3 - mids.length;
+    const neededFwds = 3 - fwds.length;
+
+    if (neededDefs > 0) {
+      unpicked.filter(p => p.position === "Defender").slice(0, neededDefs).forEach(p => picked.push(p));
+    }
+    if (neededMids > 0) {
+      unpicked.filter(p => p.position === "Midfielder").slice(0, neededMids).forEach(p => picked.push(p));
+    }
+    if (neededFwds > 0) {
+      unpicked.filter(p => p.position === "Attacker").slice(0, neededFwds).forEach(p => picked.push(p));
+    }
   }
 
-  const finalGK  = picked.slice(0, 1);
-  const finalDEF = picked.slice(1, 5);
-  const finalMID = picked.slice(5, 8);
-  const finalFWD = picked.slice(8, 11);
-  const bench    = sorted.filter(p => !picked.includes(p)).slice(0, 4);
-  const rows     = [finalFWD, finalMID, finalDEF, finalGK];
+  const finalGK  = picked.filter(p => p.position === "Goalkeeper").slice(0, 1);
+  const finalDEF = picked.filter(p => p.position === "Defender").slice(0, 4);
+  const finalMID = picked.filter(p => p.position === "Midfielder").slice(0, 3);
+  const finalFWD = picked.filter(p => p.position === "Attacker").slice(0, 3);
+
+  // Bench: best available players with appearances who didn't start
+  const bench = sorted
+    .filter(p => !picked.includes(p))
+    .filter(p => p.appearances > 0)
+    .slice(0, 4);
+
+  const rows = [finalFWD, finalMID, finalDEF, finalGK];
 
   return (
     <div style={{ marginTop: "24px" }}>
