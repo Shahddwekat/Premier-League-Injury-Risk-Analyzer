@@ -23,6 +23,42 @@ function setCache(key, data) {
   } catch {}
 }
 
+// Fetch FPL data from browser (no CORS issues)
+async function fetchFPLData() {
+  const cached = getCached("fpl_bootstrap");
+  if (cached) return cached;
+
+  const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+  const data = await response.json();
+
+  // Cache bootstrap for 1 hour
+  try {
+    localStorage.setItem("fpl_bootstrap", JSON.stringify({
+      data,
+      timestamp: Date.now(),
+    }));
+  } catch {}
+
+  return data;
+}
+
+async function fetchFPLFixtures() {
+  const cached = getCached("fpl_fixtures");
+  if (cached) return cached;
+
+  const response = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+  const data = await response.json();
+
+  try {
+    localStorage.setItem("fpl_fixtures", JSON.stringify({
+      data,
+      timestamp: Date.now(),
+    }));
+  } catch {}
+
+  return data;
+}
+
 export const analyzeWorkload = async (playersData) => {
   const cacheKey = `fpl_team_${playersData.fplTeamId}`;
 
@@ -32,7 +68,21 @@ export const analyzeWorkload = async (playersData) => {
     return cached;
   }
 
-  const response = await axios.post("/api/analyze", { playersData });
+  // Fetch FPL data from browser
+  const [bootstrapData, fixturesData] = await Promise.all([
+    fetchFPLData(),
+    fetchFPLFixtures(),
+  ]);
+
+  // Send everything to server
+  const response = await axios.post("/api/analyze", {
+    playersData: {
+      ...playersData,
+      bootstrapData,
+      fixturesData,
+    }
+  });
+
   setCache(cacheKey, response.data);
   return response.data;
 };

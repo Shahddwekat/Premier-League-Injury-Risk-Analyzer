@@ -9,40 +9,16 @@ export default async function handler(req, res) {
 
   try {
     const fplTeamId = Number(req.body.playersData.fplTeamId);
-    const { teamName } = req.body.playersData;
+    const { teamName, bootstrapData, fixturesData } = req.body.playersData;
 
-    const fplResponse = await axios.get(
-      "https://fantasy.premierleague.com/api/bootstrap-static/",
-      {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "application/json, text/plain, */*",
-          "Accept-Language": "en-US,en;q=0.9",
-          "Accept-Encoding": "gzip, deflate, br",
-          "Referer": "https://fantasy.premierleague.com/",
-          "Origin": "https://fantasy.premierleague.com",
-        }
-      }
-    );
-    const fplData = fplResponse.data;
-
+    const fplData = bootstrapData;
     const fplTeam = fplData.teams.find(t => t.id === fplTeamId);
     const resolvedTeamName = fplTeam?.name || teamName;
-
-    const fixturesResponse = await axios.get(
-      "https://fantasy.premierleague.com/api/fixtures/",
-      {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Referer": "https://fantasy.premierleague.com/",
-        }
-      }
-    );
 
     const currentEvent = fplData.events.find(e => e.is_current) || fplData.events.find(e => e.is_next);
     const currentGW = currentEvent?.id || 1;
 
-    const upcomingFixtures = fixturesResponse.data.filter(f =>
+    const upcomingFixtures = fixturesData.filter(f =>
       (f.team_h === fplTeamId || f.team_a === fplTeamId) &&
       f.event >= currentGW &&
       f.event <= currentGW + 3
@@ -89,6 +65,7 @@ export default async function handler(req, res) {
 
     console.log("FPL team ID:", fplTeamId);
     console.log("Resolved team name:", resolvedTeamName);
+    console.log("Current GW:", currentGW);
     console.log("FPL players length:", players.length);
     console.log("Upcoming fixtures in next 3 GWs:", upcomingFixtures);
 
@@ -240,11 +217,7 @@ Respond ONLY with a raw JSON array, no markdown:
       );
       return {
         ...p,
-        risk: p.injured
-          ? "High"
-          : aiMatch
-          ? aiMatch.risk
-          : "Low",
+        risk: p.injured ? "High" : aiMatch ? aiMatch.risk : "Low",
         injuryHistory: injuries.filter(i =>
           i.player.toLowerCase().includes(p.name.toLowerCase()) ||
           p.name.toLowerCase().includes(i.player.toLowerCase())
@@ -252,7 +225,6 @@ Respond ONLY with a raw JSON array, no markdown:
       };
     });
 
-    // Top performers by form
     const topPerformers = players
       .filter(p => p.status === "a" && p.appearances > 0)
       .sort((a, b) => b.form - a.form)
@@ -270,7 +242,6 @@ Respond ONLY with a raw JSON array, no markdown:
         epNext: p.epNext,
       }));
 
-    // Low form players
     const lowFormPlayers = players
       .filter(p => p.status === "a" && p.appearances > 0)
       .sort((a, b) => a.form - b.form)
@@ -295,6 +266,7 @@ RULES:
 - Do NOT give generic FPL advice — every sentence must reference specific players from this team
 
 Team: ${resolvedTeamName}
+Current Gameweek: ${currentGW}
 Squad Fitness: ${squadFitnessScore}%
 Upcoming fixtures in next 3 GWs: ${upcomingFixtures}
 
