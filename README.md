@@ -1,11 +1,11 @@
-# ⚽ Premier League Injury Risk Analyzer
+# Premier League Injury Risk Analyzer
 
 A full stack AI-powered web application that analyzes Premier League squad fitness and injury risk using real football data and large language models.
 
 ## 🔗 Live Demo
 [premier-league-injury-risk-analyzer.vercel.app](https://premier-league-injury-risk-analyzer.vercel.app)
 
-## 🚀 Features
+##  Features
 - **AI Injury Risk Analysis** : identifies the top 3 available players most at risk of getting injured based on minutes played, age, position, form, xG, and fixture congestion
 - **Currently Injured Section** : separate view showing all injured, unavailable, doubtful, and suspended players with FPL news and injury details
 - **Squad Fitness Score** : calculates overall team fitness based on real-time FPL availability data
@@ -25,7 +25,7 @@ A full stack AI-powered web application that analyzes Premier League squad fitne
 - **Photos & Badges:** FPL CDN (resources.premierleague.com)
 - **Deployment:** Vercel
 
-## 🏗 Architecture
+##  Architecture
 The app uses a serverless backend to call the FPL API (bypassing browser CORS restrictions) and the Groq AI model. When a user selects a team:
 
 1. The server fetches the full squad from the official FPL API
@@ -35,7 +35,7 @@ The app uses a serverless backend to call the FPL API (bypassing browser CORS re
 5. The AI returns a structured JSON risk assessment that drives the UI directly
 6. Results are cached in localStorage for 24 hours for instant repeat lookups
 
-## 🧠 Injury Risk Factors
+##  Injury Risk Factors
 The AI considers the following when assessing injury risk:
 - **Physical load** : total minutes (2500+ = very high risk)
 - **Age** : 32+ significantly higher risk, 28-31 moderate
@@ -72,11 +72,11 @@ npm run dev
 node server/index.cjs
 ```
 
-## 📊 Data Sources
+##  Data Sources
 - **[Fantasy Premier League API](https://fantasy.premierleague.com/api/bootstrap-static/)**  official PL squad data, player stats, injury status, updated every gameweek
 - **[Groq API](https://groq.com/)**  LLM inference using Llama 3.3 70B
 
-## ⚠️ Limitations
+##  Limitations
 - **Groq free tier** : limited to 500,000 tokens per day and 30 requests per minute. Heavy usage may temporarily hit rate limits
 - **FPL API CORS** : the FPL API blocks browser requests, so all data fetching happens server side via Vercel functions
 - **FPL API availability** : the FPL API occasionally blocks requests from cloud datacenter IPs. Browser-like headers are sent to mitigate this but occasional 403 errors may occur
@@ -85,5 +85,5 @@ node server/index.cjs
 - **Age** : calculated from FPL birth_date field, which may not be available for all players
 - **Injury risk assessment is AI generated** based on available public data and should not be used for medical or professional sporting decisions
 
-## 👩‍💻 Author
+##  Author
 Shahd Dwekat
